@@ -1,35 +1,57 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const CartContext = createContext();
 
 export function CartProvider({ children }) {
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState(() => {
+    const savedCart = localStorage.getItem('mc_molato_cart');
+    return savedCart ? JSON.parse(savedCart) : [];
+  });
 
-  // Ajouter un article au panier
+  useEffect(() => {
+    localStorage.setItem('mc_molato_cart', JSON.stringify(cart));
+  }, [cart]);
+
   const addToCart = (product) => {
     setCart((prevCart) => {
+      // Nettoyage et conversion rigoureuse du prix en nombre
+      let numericPrice = 0;
+      if (typeof product.rawPrice === 'number' && !isNaN(product.rawPrice)) {
+        numericPrice = product.rawPrice;
+      } else if (product.priceFormatted) {
+        numericPrice = parseInt(product.priceFormatted.replace(/[^0-9]/g, ''), 10) || 0;
+      }
+
       const existingItem = prevCart.find((item) => item.id === product.id);
       if (existingItem) {
-        // Si le produit existe déjà, on augmente sa quantité
         return prevCart.map((item) =>
-          item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+          item.id === product.id ? { ...item, quantity: item.quantity + 1, rawPrice: numericPrice } : item
         );
       }
-      // Sinon on l'ajoute avec une quantité de 1
-      return [...prevCart, { ...product, quantity: 1 }];
+      return [...prevCart, { ...product, rawPrice: numericPrice, quantity: 1 }];
     });
   };
 
-  // Supprimer un article du panier
   const removeFromCart = (id) => {
     setCart((prevCart) => prevCart.filter((item) => item.id !== id));
   };
 
-  // Calculer le montant total en Francs Congolais (CDF)
-  const totalPrice = cart.reduce((total, item) => total + (item.priceValue * item.quantity), 0);
+  const updateQuantity = (id, quantity) => {
+    if (quantity <= 0) {
+      removeFromCart(id);
+    } else {
+      setCart((prevCart) =>
+        prevCart.map((item) => (item.id === id ? { ...item, quantity } : item))
+      );
+    }
+  };
+
+  const clearCart = () => {
+    setCart([]);
+  };
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, removeFromCart, totalPrice }}>
+    <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity, clearCart }}>
       {children}
     </CartContext.Provider>
   );
