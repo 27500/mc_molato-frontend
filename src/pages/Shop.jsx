@@ -51,6 +51,7 @@ export default function Shop() {
   const searchQuery = searchParams.get('search') || '';
 
   const [selectedCategory, setSelectedCategory] = useState('tous');
+  const [sortOrder, setSortOrder] = useState('default'); // Ajout de l'état pour le tri par prix
   const [products, setProducts] = useState(initialProducts);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -74,7 +75,7 @@ export default function Shop() {
     };
   }, []);
 
-  // --- FILTRAGE STRICT ---
+  // --- FILTRAGE STRICT & TRI ---
   const filteredProducts = products.filter(p => {
     if (searchQuery.trim() !== '') {
       const query = searchQuery.toLowerCase().trim();
@@ -86,6 +87,10 @@ export default function Shop() {
     }
     if (selectedCategory === 'tous') return true;
     return p.category.toLowerCase() === selectedCategory.toLowerCase();
+  }).sort((a, b) => {
+    if (sortOrder === 'asc') return (a.rawPrice || 0) - (b.rawPrice || 0);
+    if (sortOrder === 'desc') return (b.rawPrice || 0) - (a.rawPrice || 0);
+    return 0;
   });
 
   return (
@@ -100,20 +105,35 @@ export default function Shop() {
 
       {/* Affichage des catégories uniquement si on ne fait pas de recherche */}
       {!searchQuery && (
-        <div className="flex justify-center gap-3 mb-10 overflow-x-auto pb-2">
-          {['tous', 'homme', 'femme', 'unisexe'].map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-6 py-2.5 rounded-full text-xs font-medium uppercase tracking-wider transition ${
-                selectedCategory === cat 
-                  ? 'bg-black text-white shadow-md' 
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
+        <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-10">
+          <div className="flex justify-center gap-3 overflow-x-auto pb-2 w-full md:w-auto">
+            {['tous', 'homme', 'femme', 'unisexe'].map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-6 py-2.5 rounded-full text-xs font-medium uppercase tracking-wider transition ${
+                  selectedCategory === cat 
+                    ? 'bg-black text-white shadow-md' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {cat === 'tous' ? 'Tous les styles' : cat}
+              </button>
+            ))}
+          </div>
+
+          {/* Bouton de tri par prix (select) */}
+          <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+            <select
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value)}
+              className="bg-gray-100 border border-gray-200 text-gray-700 text-xs rounded-full px-4 py-2.5 outline-none focus:border-black transition cursor-pointer"
             >
-              {cat === 'tous' ? 'Tous les styles' : cat}
-            </button>
-          ))}
+              <option value="default">Trier par : Pertinence</option>
+              <option value="asc">Prix : Croissant</option>
+              <option value="desc">Prix : Décroissant</option>
+            </select>
+          </div>
         </div>
       )}
 
