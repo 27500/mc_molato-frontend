@@ -23,8 +23,8 @@ export default function Cart() {
   }, 0);
 
   const handleWhatsAppOrder = () => {
-    const phoneNumber = "+212646101150";
-    let message = "Bonjour Mc Molato, je souhaite passer commande :\n\n";
+    const phoneNumber = "+243 838 292 572";
+    let message = "Bonjour Mc Molato, je souhaite passer ma commande :\n\n";
     
     cart.forEach((item) => {
       const unitPrice = getSafePrice(item);
