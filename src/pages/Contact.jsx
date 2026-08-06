@@ -9,36 +9,70 @@ export default function Contact() {
   });
 
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError(null);
 
-    // Création de l'objet message structuré pour l'admin
-    const newMessage = {
+    // Objet structuré prêt pour l'API Backend et MongoDB
+    const messageData = {
       id: Date.now(),
       name: `${formData.prenom} ${formData.nom}`.trim(),
+      prenom: formData.prenom.trim(),
+      nom: formData.nom.trim(),
       email: formData.email.trim(),
       message: formData.message.trim(),
-      date: new Date().toLocaleDateString('fr-FR', { 
-        day: 'numeric', 
-        month: 'short', 
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      })
+      date: new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
     };
 
-    // Enregistrement dans le localStorage pour la page admin
-    const existingMessages = JSON.parse(localStorage.getItem('mc_molato_contact_messages') || '[]');
-    const updatedMessages = [newMessage, ...existingMessages];
-    
-    localStorage.setItem('mc_molato_contact_messages', JSON.stringify(updatedMessages));
+    let isSent = false;
 
-    setSubmitted(true);
+    // 1. Envoi vers l'API Backend (prêt pour la production / déploiement)
+    // En production, remplace 'http://localhost:5000' par l'URL de ton serveur déployé (ou utilise une variable d'environnement comme import.meta.env.VITE_API_URL)
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+    try {
+      const response = await fetch(`${API_URL}/api/contact`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(messageData),
+      });
+
+      if (response.ok) {
+        isSent = true;
+      } else {
+        throw new Error("Erreur serveur lors de l'enregistrement.");
+      }
+    } catch (err) {
+      console.warn("Backend non disponible, passage sur le stockage de secours local (localStorage).", err);
+      
+      // 2. Secours local (localStorage) pour ne pas bloquer si le backend est hors ligne en dev
+      try {
+        const existingMessages = JSON.parse(localStorage.getItem('mc_molato_contact_messages') || '[]');
+        const updatedMessages = [messageData, ...existingMessages];
+        localStorage.setItem('mc_molato_contact_messages', JSON.stringify(updatedMessages));
+        isSent = true; // Permet de valider l'envoi visuellement même sans serveur en local
+      } catch (localErr) {
+        console.error("Erreur localStorage:", localErr);
+      }
+    } finally {
+      setLoading(false);
+    }
+
+    if (isSent) {
+      setSubmitted(true);
+    } else {
+      setError("Impossible d'envoyer le message pour le moment. Veuillez réessayer plus tard.");
+    }
   };
 
   return (
@@ -124,6 +158,12 @@ export default function Contact() {
         <div className="lg:col-span-2 bg-[#f7f7f7] border border-gray-200/80 rounded-[2.5rem] p-8 md:p-12">
           <h2 className="text-xl font-serif mb-6">Envoyez-nous un message</h2>
 
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-600 text-xs rounded-2xl">
+              {error}
+            </div>
+          )}
+
           {submitted ? (
             <div className="bg-white border border-gray-200 rounded-2xl p-8 text-center max-w-md mx-auto shadow-sm">
               <span className="text-4xl mb-3 block">✨</span>
@@ -197,9 +237,10 @@ export default function Contact() {
 
               <button 
                 type="submit" 
-                className="mt-2 bg-black hover:bg-zinc-800 text-white text-xs tracking-wider uppercase px-6 py-4 rounded-full font-medium transition shadow-md w-full"
+                disabled={loading}
+                className="mt-2 bg-black hover:bg-zinc-800 disabled:bg-zinc-400 text-white text-xs tracking-wider uppercase px-6 py-4 rounded-full font-medium transition shadow-md w-full cursor-pointer"
               >
-                Envoyer le message
+                {loading ? "Envoi en cours..." : "Envoyer le message"}
               </button>
 
             </form>

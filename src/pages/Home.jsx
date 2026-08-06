@@ -1,7 +1,20 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
 export default function Home() {
+  // Optimisation SEO : Mise à jour du titre et de la description pour Google
+  useEffect(() => {
+    document.title = "Mc Molato | Boutique de mode en ligne et vêtements africains";
+    
+    let metaDescription = document.querySelector("meta[name='description']");
+    if (!metaDescription) {
+      metaDescription = document.createElement('meta');
+      metaDescription.name = "description";
+      document.head.appendChild(metaDescription);
+    }
+    metaDescription.content = "Découvrez Mc Molato, votre boutique de mode en ligne spécialisée dans les vêtements et tissus africains authentiques, faits main par des artisans.";
+  }, []);
+
   return (
     <div className="flex flex-col gap-5">
       
@@ -12,7 +25,7 @@ export default function Home() {
         <div className="lg:col-span-2 relative rounded-[2.5rem] overflow-hidden bg-gray-900 min-h-[420px] md:min-h-[480px] flex items-center p-8 md:p-12 shadow-sm">
           <img 
             src="/couple.jpeg"
-            alt="Hero African Fashion" 
+            alt="Mode et vêtements africains en ligne - Mc Molato" 
             className="absolute inset-0 w-full h-full object-cover opacity-80"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent"></div>
@@ -22,7 +35,7 @@ export default function Home() {
               Célébrez l'héritage africain dans chaque fil
             </h1>
             <p className="text-gray-200 text-xs md:text-sm font-light mb-8 max-w-sm">
-              Tissé à la main par des artisans locaux avec des générations de talent et de passion.
+              Tissé à la main par des artisans locaux avec des générations de talent et de passion. Votre boutique de mode en ligne de référence.
             </p>
             <Link to="/boutique" className="inline-block bg-black hover:bg-zinc-800 text-white text-xs tracking-wider uppercase px-6 py-3.5 rounded-full font-medium transition shadow-md">
               VOIR LES COLLECTIONS
@@ -36,7 +49,7 @@ export default function Home() {
           <Link to="/boutique?category=femme" className="relative rounded-[2rem] overflow-hidden bg-gray-100 h-[225px] group block">
             <img 
               src="/femme.jpeg" 
-              alt="Collection Femme" 
+              alt="Collection Mode Femme - Mc Molato" 
               className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
             />
             <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-4 py-1.5 rounded-full text-xs font-semibold text-gray-900 shadow-sm">
@@ -47,7 +60,7 @@ export default function Home() {
           <Link to="/boutique?category=homme" className="relative rounded-[2rem] overflow-hidden bg-gray-100 h-[225px] group block">
             <img 
               src="/homme.jpeg" 
-              alt="Collection Homme" 
+              alt="Collection Mode Homme - Mc Molato" 
               className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
             />
             <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-4 py-1.5 rounded-full text-xs font-semibold text-gray-900 shadow-sm">
@@ -66,7 +79,7 @@ export default function Home() {
         <div className="relative rounded-[2rem] overflow-hidden bg-gray-200 h-[280px] p-6 flex flex-col justify-end group">
           <img 
             src="/mode.jpeg" 
-            alt="Créez votre style" 
+            alt="Créez votre style de mode en ligne" 
             className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition duration-500"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
@@ -85,7 +98,7 @@ export default function Home() {
         <div className="relative rounded-[2rem] overflow-hidden bg-gray-200 h-[280px] p-6 flex flex-col justify-end group">
           <img 
             src="/style.jpeg" 
-            alt="Fait main" 
+            alt="Fait main avec des techniques traditionnelles" 
             className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition duration-500"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>

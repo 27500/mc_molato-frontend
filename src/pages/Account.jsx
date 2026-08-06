@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
+import { API_URL } from '../services/api';
 
 export default function Account() {
   const [step, setStep] = useState('loading'); // 'register', 'login-email', 'verify-otp', 'dashboard'
@@ -14,7 +15,6 @@ export default function Account() {
   // États pour la connexion / OTP
   const [loginEmail, setLoginEmail] = useState('');
   const [enteredOtp, setEnteredOtp] = useState('');
-  const [generatedOtp, setGeneratedOtp] = useState('');
   
   const [user, setUser] = useState(null);
   const [message, setMessage] = useState('');
@@ -27,67 +27,113 @@ export default function Account() {
     const savedUser = localStorage.getItem('mc_molato_user');
     const isLogged = localStorage.getItem('mc_molato_logged');
 
-    if (savedUser) {
+    if (savedUser && isLogged === 'true') {
       const parsedUser = JSON.parse(savedUser);
       setUser(parsedUser);
-      if (isLogged === 'true') {
-        setStep('dashboard');
-      } else {
-        setStep('login-email');
-      }
+      setStep('dashboard');
     } else {
       setStep('register');
     }
   }, []);
 
-  // Inscription
-  const handleRegister = (e) => {
+  // Inscription connectée au Backend
+  const handleRegister = async (e) => {
     e.preventDefault();
     if (!name || !email) {
       setMessage('Veuillez remplir tous les champs obligatoires.');
       return;
     }
-    const newUser = { name, email, phone };
-    localStorage.setItem('mc_molato_user', JSON.stringify(newUser));
-    setUser(newUser);
-    setMessage('');
-    setStep('login-email');
-  };
+    
+    try {
+      const response = await fetch(`${API_URL}/users/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, phone })
+      });
+      const data = await response.json();
 
-  // Demander OTP
-  const handleRequestOtp = (e) => {
-    e.preventDefault();
-    const savedUser = JSON.parse(localStorage.getItem('mc_molato_user'));
+      if (!response.ok) {
+        setMessage(data.message || "Erreur lors de l'inscription.");
+        return;
+      }
 
-    if (!savedUser || savedUser.email !== loginEmail.trim()) {
-      setMessage('Cet email ne correspond à aucun compte enregistré.');
-      return;
+      const newUser = { name: data.name, email: data.email, phone: phone || '' };
+      localStorage.setItem('mc_molato_user', JSON.stringify(newUser));
+      setUser(newUser);
+      setMessage('');
+      setLoginEmail(data.email);
+      setStep('login-email');
+    } catch (error) {
+      setMessage("Erreur de connexion avec le serveur backend.");
     }
-
-    const code = Math.floor(1000 + Math.random() * 9000).toString();
-    setGeneratedOtp(code);
-    setMessage('');
-    setStep('verify-otp');
-
-    alert(`[SIMULATION BACKEND] Un code OTP de sécurité a été envoyé à ${loginEmail}.\nVotre code : ${code}`);
   };
 
-  // Vérifier OTP
-  const handleVerifyOtp = (e) => {
+  // Demander un VRAI OTP par e-mail (Nodemailer)
+  const handleRequestOtp = async (e) => {
     e.preventDefault();
-    if (enteredOtp.trim() === generatedOtp) {
+    setMessage('Envoi du code en cours...');
+    
+    try {
+      const response = await fetch(`${API_URL}/users/send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: loginEmail.trim() })
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        setMessage(data.message || 'Cet email ne correspond à aucun compte enregistré.');
+        return;
+      }
+
+      setMessage('');
+      setStep('verify-otp');
+    } catch (error) {
+      setMessage("Erreur de connexion avec le serveur backend.");
+    }
+  };
+
+  // Vérifier le VRAI OTP auprès du Backend
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const response = await fetch(`${API_URL}/users/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: loginEmail.trim(), otp: enteredOtp.trim() })
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        setMessage(data.message || 'Code OTP incorrect.');
+        return;
+      }
+
+      // TRÈS IMPORTANT : On sauvegarde le bon utilisateur connecté et l'état de connexion
+      if (data.user) {
+        localStorage.setItem('mc_molato_user', JSON.stringify(data.user));
+        setUser(data.user);
+      }
       localStorage.setItem('mc_molato_logged', 'true');
+      
       setStep('dashboard');
       setMessage('');
-    } else {
-      setMessage('Code OTP incorrect. Veuillez réessayer.');
+      
+      // Recharge la page pour forcer la mise à jour des favoris/panier du nouveau compte
+      window.location.reload();
+    } catch (error) {
+      setMessage("Erreur de connexion avec le serveur backend.");
     }
   };
 
   // Déconnexion
   const handleLogout = () => {
     localStorage.removeItem('mc_molato_logged');
+    localStorage.removeItem('mc_molato_user'); // Supprime l'utilisateur pour vider les données
+    setUser(null);
     setStep('login-email');
+    window.location.reload();
   };
 
   if (step === 'loading') {
@@ -97,7 +143,7 @@ export default function Account() {
   return (
     <div className="py-12 px-4 max-w-lg mx-auto text-gray-900">
       
-      {/* Photo du logo Mc Molato (Format Radius) en haut de la page Mon Compte */}
+      {/* Logo */}
       <div className="mb-8 flex justify-center">
         <Link to="/">
           <img 
@@ -108,7 +154,7 @@ export default function Account() {
         </Link>
       </div>
 
-      {/* ================= 1. FORMULAIRE D'INSCRIPTION ================= */}
+      {/* 1. INSCRIPTION */}
       {step === 'register' && (
         <div className="bg-gray-50 border border-gray-100 p-8 rounded-[2rem] shadow-sm">
           <h1 className="text-2xl font-serif font-light mb-2 text-center">Créer un compte</h1>
@@ -160,7 +206,6 @@ export default function Account() {
             </button>
           </form>
 
-          {/* Lien bascule vers Connexion */}
           <div className="mt-6 text-center border-t border-gray-200/60 pt-4">
             <span className="text-xs text-gray-400">Déjà un compte ? </span>
             <button 
@@ -180,11 +225,11 @@ export default function Account() {
         </div>
       )}
 
-      {/* ================= 2. ÉTAPE DE CONNEXION : SAISIE EMAIL ================= */}
+      {/* 2. CONNEXION : SAISIE EMAIL */}
       {step === 'login-email' && (
         <div className="bg-gray-50 border border-gray-100 p-8 rounded-[2rem] shadow-sm">
           <h1 className="text-2xl font-serif font-light mb-2 text-center">Connexion</h1>
-          <p className="text-xs text-gray-500 text-center mb-6">Entrez votre email pour recevoir votre code de sécurité OTP.</p>
+          <p className="text-xs text-gray-500 text-center mb-6">Entrez votre email pour recevoir votre code OTP par e-mail.</p>
 
           {message && <div className="mb-4 p-3 bg-red-100 text-red-600 text-xs rounded-xl">{message}</div>}
 
@@ -209,7 +254,6 @@ export default function Account() {
             </button>
           </form>
           
-          {/* Lien bascule vers Inscription */}
           <div className="mt-6 text-center border-t border-gray-200/60 pt-4 flex items-center justify-between text-xs">
             <button 
               onClick={() => setStep('register')}
@@ -217,19 +261,11 @@ export default function Account() {
             >
               Pas encore de compte ? <span className="font-medium underline">S'inscrire</span>
             </button>
-            {localStorage.getItem('mc_molato_user') && (
-              <button 
-                onClick={() => { localStorage.removeItem('mc_molato_user'); setStep('register'); }}
-                className="text-red-500 hover:underline"
-              >
-                Réinitialiser
-              </button>
-            )}
           </div>
         </div>
       )}
 
-      {/* ================= 3. ÉTAPE DE VÉRIFICATION OTP ================= */}
+      {/* 3. VÉRIFICATION OTP */}
       {step === 'verify-otp' && (
         <div className="bg-gray-50 border border-gray-100 p-8 rounded-[2rem] shadow-sm text-center">
           <h1 className="text-2xl font-serif font-light mb-2">Vérification d'identité</h1>
@@ -269,14 +305,12 @@ export default function Account() {
         </div>
       )}
 
-      {/* ================= 4. DASHBOARD CLIENT VIP CONNECTÉ ================= */}
+      {/* 4. DASHBOARD */}
       {step === 'dashboard' && user && (
         <div className="bg-gray-50 border border-gray-100 p-8 rounded-[2rem] shadow-sm">
-          
-          {/* En-tête profil */}
           <div className="text-center mb-8">
             <div className="w-16 h-16 bg-black text-white text-2xl font-serif rounded-full flex items-center justify-center mx-auto mb-3 shadow-md">
-              {user.name.charAt(0).toUpperCase()}
+              {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
             </div>
             <h1 className="text-2xl font-serif font-medium">{user.name}</h1>
             <p className="text-xs text-gray-500">{user.email}</p>
@@ -285,7 +319,6 @@ export default function Account() {
             </span>
           </div>
 
-          {/* Raccourcis Favoris & Panier synchronisés */}
           <div className="grid grid-cols-2 gap-4 mb-8">
             <Link 
               to="/favoris"
@@ -306,7 +339,6 @@ export default function Account() {
             </Link>
           </div>
 
-          {/* Informations personnelles */}
           <div className="bg-white border border-gray-200/60 rounded-2xl p-4 mb-8 text-xs flex flex-col gap-3 shadow-sm">
             <div className="flex justify-between py-1.5 border-b border-gray-100">
               <span className="text-gray-400">Téléphone :</span>
@@ -314,11 +346,10 @@ export default function Account() {
             </div>
             <div className="flex justify-between py-1.5">
               <span className="text-gray-400">Sécurité :</span>
-              <span className="font-medium text-emerald-600">Authentification OTP active</span>
+              <span className="font-medium text-emerald-600">Authentification OTP par e-mail active</span>
             </div>
           </div>
 
-          {/* Bouton déconnexion */}
           <button 
             onClick={handleLogout}
             className="w-full border border-gray-300 hover:bg-gray-100 text-gray-800 py-3 rounded-xl text-xs font-medium tracking-wider uppercase transition"

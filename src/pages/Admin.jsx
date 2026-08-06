@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { API_URL } from '../services/api';
 
 const ALLOWED_ADMIN_EMAILS = [
   'blessingmingenge@gmail.com',
@@ -9,9 +10,9 @@ const ALLOWED_ADMIN_EMAILS = [
 export default function Admin() {
   const [step, setStep] = useState('email');
   const [emailInput, setEmailInput] = useState('');
-  const [generatedOtp, setGeneratedOtp] = useState('');
   const [enteredOtp, setEnteredOtp] = useState('');
   const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
 
   // Formulaire d'ajout d'article
   const [name, setName] = useState('');
@@ -24,7 +25,7 @@ export default function Admin() {
   const [mainFile, setMainFile] = useState(null);
   const [mainUrl, setMainUrl] = useState('');
 
-  // Photos supplémentaires
+  // Photos supplémentaires (gère dynamiquement 3 photos ou plus)
   const [extraPhotos, setExtraPhotos] = useState([]);
   const [successMessage, setSuccessMessage] = useState('');
   const [customProducts, setCustomProducts] = useState([]);
@@ -42,32 +43,71 @@ export default function Admin() {
     setCustomProducts(stored);
   };
 
-  const handleRequestOtp = (e) => {
+  // 📌 1. Demander l'envoi du vrai OTP par e-mail via le Backend
+  const handleRequestOtp = async (e) => {
     e.preventDefault();
     const cleanEmail = emailInput.trim().toLowerCase();
 
     if (!ALLOWED_ADMIN_EMAILS.includes(cleanEmail)) {
-      setMessage("Accès refusé : Cette adresse e-mail n'est pas autorisée.");
+      setMessage("Accès refusé : Cette adresse e-mail n'est pas autorisée en tant qu'administrateur.");
       return;
     }
 
-    const code = Math.floor(1000 + Math.random() * 9000).toString();
-    setGeneratedOtp(code);
+    setLoading(true);
     setMessage('');
-    setStep('otp');
 
-    alert(`[SÉCURITÉ ADMIN] Code OTP généré pour ${cleanEmail}.\nVotre code secret : ${code}`);
+    try {
+      const response = await fetch(`${API_URL}/users/send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cleanEmail })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setStep('otp');
+        setMessage('');
+      } else {
+        setMessage(data.message || "Erreur lors de l'envoi du code.");
+      }
+    } catch (error) {
+      console.error("Erreur réseau :", error);
+      setMessage("Impossible de contacter le serveur backend.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleVerifyOtp = (e) => {
+  // 📌 2. Vérifier l'OTP via le Backend
+  const handleVerifyOtp = async (e) => {
     e.preventDefault();
-    if (enteredOtp.trim() === generatedOtp) {
-      sessionStorage.setItem('mc_molato_admin_verified', 'true');
-      setStep('dashboard');
-      loadCustomProducts();
-      setMessage('');
-    } else {
-      setMessage('Code OTP incorrect. Veuillez réessayer.');
+    const cleanEmail = emailInput.trim().toLowerCase();
+    setLoading(true);
+    setMessage('');
+
+    try {
+      const response = await fetch(`${API_URL}/users/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cleanEmail, otp: enteredOtp.trim() })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        sessionStorage.setItem('mc_molato_admin_verified', 'true');
+        setStep('dashboard');
+        loadCustomProducts();
+        setMessage('');
+      } else {
+        setMessage(data.message || 'Code OTP incorrect. Veuillez réessayer.');
+      }
+    } catch (error) {
+      console.error("Erreur réseau :", error);
+      setMessage("Erreur lors de la vérification du code.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -88,12 +128,22 @@ export default function Admin() {
     }));
   };
 
-  const handleAddProduct = (e) => {
+  // Utilitaire pour convertir un fichier en Base64 (persistant après actualisation)
+  const convertFileToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
+  const handleAddProduct = async (e) => {
     e.preventDefault();
     
     let finalMainImage = '';
     if (mainInputType === 'file' && mainFile) {
-      finalMainImage = URL.createObjectURL(mainFile);
+      finalMainImage = await convertFileToBase64(mainFile);
     } else if (mainInputType === 'url' && mainUrl.trim()) {
       finalMainImage = mainUrl.trim();
     }
@@ -105,24 +155,28 @@ export default function Admin() {
 
     const numericPrice = Number(price);
 
-    const extraImagesArray = extraPhotos.map(p => {
+    const extraImagesArray = [];
+    for (const p of extraPhotos) {
       if (p.type === 'file' && p.file) {
-        return URL.createObjectURL(p.file);
+        const base64Img = await convertFileToBase64(p.file);
+        extraImagesArray.push(base64Img);
       } else if (p.type === 'url' && p.url.trim()) {
-        return p.url.trim();
+        extraImagesArray.push(p.url.trim());
       }
-      return null;
-    }).filter(Boolean);
+    }
+
+    const uniqueId = `custom_${Date.now()}`;
 
     const newProduct = {
-      id: Date.now(),
+      id: uniqueId,
       name: name.trim(),
       priceFormatted: `${numericPrice.toLocaleString()} CDF`,
       rawPrice: numericPrice,
       category,
       description: description.trim() || 'Aucune description détaillée fournie.',
       image: finalMainImage,
-      images: [finalMainImage, ...extraImagesArray]
+      images: [finalMainImage, ...extraImagesArray],
+      isCustom: true // Indicateur clé pour que les favoris reconnaissent l'article
     };
 
     const existingProducts = JSON.parse(localStorage.getItem('mc_molato_custom_products') || '[]');
@@ -180,9 +234,10 @@ export default function Admin() {
             />
             <button 
               type="submit"
-              className="w-full bg-black text-white py-3 rounded-xl text-xs font-medium tracking-wider uppercase hover:bg-zinc-800 transition shadow-sm"
+              disabled={loading}
+              className="w-full bg-black text-white py-3 rounded-xl text-xs font-medium tracking-wider uppercase hover:bg-zinc-800 transition shadow-sm disabled:opacity-50"
             >
-              Envoyer le code OTP
+              {loading ? "Envoi en cours..." : "Envoyer le code OTP"}
             </button>
           </form>
         </div>
@@ -198,7 +253,7 @@ export default function Admin() {
             🔑
           </div>
           <h1 className="text-xl font-serif font-medium mb-1">Vérification OTP</h1>
-          <p className="text-xs text-gray-500 mb-6">Entrez le code à 4 chiffres affiché dans l'alerte.</p>
+          <p className="text-xs text-gray-500 mb-6">Entrez le code à 4 chiffres envoyé par e-mail à <span className="font-semibold">{emailInput}</span>.</p>
 
           {message && <div className="mb-4 p-3 bg-red-100 text-red-600 text-xs rounded-xl">{message}</div>}
 
@@ -214,9 +269,10 @@ export default function Admin() {
             />
             <button 
               type="submit"
-              className="w-full bg-black text-white py-3 rounded-xl text-xs font-medium tracking-wider uppercase hover:bg-zinc-800 transition shadow-sm"
+              disabled={loading}
+              className="w-full bg-black text-white py-3 rounded-xl text-xs font-medium tracking-wider uppercase hover:bg-zinc-800 transition shadow-sm disabled:opacity-50"
             >
-              Valider le code
+              {loading ? "Vérification..." : "Valider le code"}
             </button>
           </form>
 

@@ -51,7 +51,7 @@ export default function Shop() {
   const searchQuery = searchParams.get('search') || '';
 
   const [selectedCategory, setSelectedCategory] = useState('tous');
-  const [sortOrder, setSortOrder] = useState('default'); // Ajout de l'état pour le tri par prix
+  const [sortOrder, setSortOrder] = useState('default');
   const [products, setProducts] = useState(initialProducts);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -59,7 +59,6 @@ export default function Shop() {
   const { addToCart } = useCart();
   const { favorites, toggleFavorite } = useFavorites();
 
-  // Fonction de chargement des produits (statiques + localStorage)
   const loadProducts = () => {
     const customProducts = JSON.parse(localStorage.getItem('mc_molato_custom_products') || '[]');
     setProducts([...customProducts, ...initialProducts]);
@@ -68,14 +67,12 @@ export default function Shop() {
   useEffect(() => {
     loadProducts();
 
-    // Écouteur pour actualiser la boutique en temps réel lors de l'ajout d'un article depuis l'Admin
     window.addEventListener('custom_products_updated', loadProducts);
     return () => {
       window.removeEventListener('custom_products_updated', loadProducts);
     };
   }, []);
 
-  // --- FILTRAGE STRICT & TRI ---
   const filteredProducts = products.filter(p => {
     if (searchQuery.trim() !== '') {
       const query = searchQuery.toLowerCase().trim();
@@ -103,7 +100,6 @@ export default function Shop() {
         </p>
       </div>
 
-      {/* Affichage des catégories uniquement si on ne fait pas de recherche */}
       {!searchQuery && (
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-10">
           <div className="flex justify-center gap-3 overflow-x-auto pb-2 w-full md:w-auto">
@@ -122,7 +118,6 @@ export default function Shop() {
             ))}
           </div>
 
-          {/* Bouton de tri par prix (select) */}
           <div className="flex items-center gap-2 w-full md:w-auto justify-end">
             <select
               value={sortOrder}
@@ -137,7 +132,6 @@ export default function Shop() {
         </div>
       )}
 
-      {/* Gestion si aucun résultat de recherche */}
       {filteredProducts.length === 0 ? (
         <div className="text-center py-20 bg-gray-50 rounded-3xl border border-gray-100 max-w-md mx-auto">
           <p className="text-sm text-gray-600 mb-4 font-medium">Aucun article ne correspond à "{searchQuery}".</p>
@@ -148,7 +142,8 @@ export default function Shop() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {filteredProducts.map((product) => {
-            const isFav = favorites.some(fav => fav.id === product.id);
+            // Comparaison sécurisée des IDs (string et number) pour garder le cœur rouge après actualisation
+            const isFav = favorites.some(fav => String(fav.id) === String(product.id));
             return (
               <div key={product.id} className="bg-gray-50 border border-gray-100 rounded-3xl p-4 flex flex-col justify-between shadow-sm hover:shadow-md transition relative group">
                 
@@ -204,7 +199,6 @@ export default function Shop() {
         </div>
       )}
 
-      {/* Modale de détails du produit */}
       {selectedProduct && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-[2rem] max-w-2xl w-full p-6 relative max-h-[90vh] overflow-y-auto">
