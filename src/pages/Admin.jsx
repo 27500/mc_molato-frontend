@@ -4,7 +4,8 @@ import { API_URL } from '../services/api';
 
 const ALLOWED_ADMIN_EMAILS = [
   'blessingmingenge@gmail.com',
-  'cadieselipa222@icloud.com'
+  'cadieselipa222@icloud.com',
+  'milungushekinah@gmail.com'
 ];
 
 export default function Admin() {
