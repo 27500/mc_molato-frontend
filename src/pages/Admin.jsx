@@ -129,12 +129,47 @@ export default function Admin() {
     }));
   };
 
-  // Utilitaire pour convertir un fichier en Base64 (persistant après actualisation)
-  const convertFileToBase64 = (file) => {
+  // 📌 Utilitaire intelligent : Compresse et convertit l'image en Base64 léger (Anti QuotaExceededError)
+  const compressAndConvertImage = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          // Redimensionnement maximal pour garder un poids ultra léger (ex: max 800px)
+          const MAX_WIDTH = 800;
+          const MAX_HEIGHT = 800;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height = Math.round((height * MAX_WIDTH) / width);
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width = Math.round((width * MAX_HEIGHT) / height);
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Compression au format JPEG avec une qualité de 0.7 (70%)
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+          resolve(compressedDataUrl);
+        };
+        img.onerror = (error) => reject(error);
+      };
       reader.onerror = (error) => reject(error);
     });
   };
@@ -143,60 +178,65 @@ export default function Admin() {
     e.preventDefault();
     
     let finalMainImage = '';
-    if (mainInputType === 'file' && mainFile) {
-      finalMainImage = await convertFileToBase64(mainFile);
-    } else if (mainInputType === 'url' && mainUrl.trim()) {
-      finalMainImage = mainUrl.trim();
-    }
-
-    if (!name || !price || !finalMainImage) {
-      alert('Veuillez remplir le nom, le prix et fournir une photo principale valide.');
-      return;
-    }
-
-    const numericPrice = Number(price);
-
-    const extraImagesArray = [];
-    for (const p of extraPhotos) {
-      if (p.type === 'file' && p.file) {
-        const base64Img = await convertFileToBase64(p.file);
-        extraImagesArray.push(base64Img);
-      } else if (p.type === 'url' && p.url.trim()) {
-        extraImagesArray.push(p.url.trim());
+    try {
+      if (mainInputType === 'file' && mainFile) {
+        finalMainImage = await compressAndConvertImage(mainFile);
+      } else if (mainInputType === 'url' && mainUrl.trim()) {
+        finalMainImage = mainUrl.trim();
       }
+
+      if (!name || !price || !finalMainImage) {
+        alert('Veuillez remplir le nom, le prix et fournir une photo principale valide.');
+        return;
+      }
+
+      const numericPrice = Number(price);
+
+      const extraImagesArray = [];
+      for (const p of extraPhotos) {
+        if (p.type === 'file' && p.file) {
+          const compressedImg = await compressAndConvertImage(p.file);
+          extraImagesArray.push(compressedImg);
+        } else if (p.type === 'url' && p.url.trim()) {
+          extraImagesArray.push(p.url.trim());
+        }
+      }
+
+      const uniqueId = `custom_${Date.now()}`;
+
+      const newProduct = {
+        id: uniqueId,
+        name: name.trim(),
+        priceFormatted: `${numericPrice.toLocaleString()} CDF`,
+        rawPrice: numericPrice,
+        category,
+        description: description.trim() || 'Aucune description détaillée fournie.',
+        image: finalMainImage,
+        images: [finalMainImage, ...extraImagesArray],
+        isCustom: true
+      };
+
+      const existingProducts = JSON.parse(localStorage.getItem('mc_molato_custom_products') || '[]');
+      const updatedProducts = [newProduct, ...existingProducts];
+      
+      localStorage.setItem('mc_molato_custom_products', JSON.stringify(updatedProducts));
+      
+      setCustomProducts(updatedProducts);
+      window.dispatchEvent(new Event('custom_products_updated'));
+
+      setSuccessMessage('Article ajouté avec succès à la boutique ! 🎉');
+      setName('');
+      setPrice('');
+      setDescription('');
+      setMainFile(null);
+      setMainUrl('');
+      setExtraPhotos([]);
+
+      setTimeout(() => setSuccessMessage(''), 4000);
+    } catch (err) {
+      console.error("Erreur lors de la compression de l'image :", err);
+      alert("Erreur lors du traitement de l'image. Veuillez essayer une autre image.");
     }
-
-    const uniqueId = `custom_${Date.now()}`;
-
-    const newProduct = {
-      id: uniqueId,
-      name: name.trim(),
-      priceFormatted: `${numericPrice.toLocaleString()} CDF`,
-      rawPrice: numericPrice,
-      category,
-      description: description.trim() || 'Aucune description détaillée fournie.',
-      image: finalMainImage,
-      images: [finalMainImage, ...extraImagesArray],
-      isCustom: true // Indicateur clé pour que les favoris reconnaissent l'article
-    };
-
-    const existingProducts = JSON.parse(localStorage.getItem('mc_molato_custom_products') || '[]');
-    const updatedProducts = [newProduct, ...existingProducts];
-    
-    localStorage.setItem('mc_molato_custom_products', JSON.stringify(updatedProducts));
-    
-    setCustomProducts(updatedProducts);
-    window.dispatchEvent(new Event('custom_products_updated'));
-
-    setSuccessMessage('Article ajouté avec succès à la boutique ! 🎉');
-    setName('');
-    setPrice('');
-    setDescription('');
-    setMainFile(null);
-    setMainUrl('');
-    setExtraPhotos([]);
-
-    setTimeout(() => setSuccessMessage(''), 4000);
   };
 
   const handleDeleteProduct = (id) => {
