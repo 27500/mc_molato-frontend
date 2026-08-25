@@ -5,19 +5,19 @@ import { useFavorites } from '../context/FavoritesContext';
 import { API_URL } from '../services/api';
 
 export default function Account() {
-  const [step, setStep] = useState('loading'); // 'register', 'login-email', 'verify-otp', 'dashboard'
+  const [step, setStep] = useState('loading'); // 'login', 'register', 'dashboard'
   
   // États du formulaire d'inscription
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
 
-  // États pour la connexion / OTP
-  const [loginEmail, setLoginEmail] = useState('');
-  const [enteredOtp, setEnteredOtp] = useState('');
+  // État pour la connexion directe (par e-mail ou nom)
+  const [identifier, setIdentifier] = useState('');
   
   const [user, setUser] = useState(null);
   const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const { cart } = useCart();
   const { favorites } = useFavorites();
@@ -28,11 +28,10 @@ export default function Account() {
     const isLogged = localStorage.getItem('mc_molato_logged');
 
     if (savedUser && isLogged === 'true') {
-      const parsedUser = JSON.parse(savedUser);
-      setUser(parsedUser);
+      setUser(JSON.parse(savedUser));
       setStep('dashboard');
     } else {
-      setStep('register');
+      setStep('login');
     }
   }, []);
 
@@ -44,6 +43,9 @@ export default function Account() {
       return;
     }
     
+    setLoading(true);
+    setMessage('');
+
     try {
       const response = await fetch(`${API_URL}/users/register`, {
         method: 'POST',
@@ -54,85 +56,68 @@ export default function Account() {
 
       if (!response.ok) {
         setMessage(data.message || "Erreur lors de l'inscription.");
+        setLoading(false);
         return;
       }
 
       const newUser = { name: data.name, email: data.email, phone: phone || '' };
       localStorage.setItem('mc_molato_user', JSON.stringify(newUser));
-      setUser(newUser);
-      setMessage('');
-      setLoginEmail(data.email);
-      setStep('login-email');
-    } catch (error) {
-      setMessage("Erreur de connexion avec le serveur backend.");
-    }
-  };
-
-  // Demander un VRAI OTP par e-mail (Nodemailer)
-  const handleRequestOtp = async (e) => {
-    e.preventDefault();
-    setMessage('Envoi du code en cours...');
-    
-    try {
-      const response = await fetch(`${API_URL}/users/send-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: loginEmail.trim() })
-      });
-      const data = await response.json();
-
-      if (!response.ok) {
-        setMessage(data.message || 'Cet email ne correspond à aucun compte enregistré.');
-        return;
-      }
-
-      setMessage('');
-      setStep('verify-otp');
-    } catch (error) {
-      setMessage("Erreur de connexion avec le serveur backend.");
-    }
-  };
-
-  // Vérifier le VRAI OTP auprès du Backend
-  const handleVerifyOtp = async (e) => {
-    e.preventDefault();
-    
-    try {
-      const response = await fetch(`${API_URL}/users/verify-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: loginEmail.trim(), otp: enteredOtp.trim() })
-      });
-      const data = await response.json();
-
-      if (!response.ok) {
-        setMessage(data.message || 'Code OTP incorrect.');
-        return;
-      }
-
-      // TRÈS IMPORTANT : On sauvegarde le bon utilisateur connecté et l'état de connexion
-      if (data.user) {
-        localStorage.setItem('mc_molato_user', JSON.stringify(data.user));
-        setUser(data.user);
-      }
       localStorage.setItem('mc_molato_logged', 'true');
-      
+      setUser(newUser);
       setStep('dashboard');
       setMessage('');
-      
-      // Recharge la page pour forcer la mise à jour des favoris/panier du nouveau compte
       window.location.reload();
     } catch (error) {
       setMessage("Erreur de connexion avec le serveur backend.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Connexion directe par Email ou Nom (Sans OTP)
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    if (!identifier) {
+      setMessage('Veuillez entrer votre e-mail ou votre nom.');
+      return;
+    }
+
+    setLoading(true);
+    setMessage('');
+
+    try {
+      const response = await fetch(`${API_URL}/users/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier: identifier.trim() })
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        setMessage(data.message || 'Compte introuvable. Veuillez vous inscrire.');
+        setLoading(false);
+        return;
+      }
+
+      localStorage.setItem('mc_molato_user', JSON.stringify(data.user));
+      localStorage.setItem('mc_molato_logged', 'true');
+      setUser(data.user);
+      setStep('dashboard');
+      setMessage('');
+      window.location.reload();
+    } catch (error) {
+      setMessage("Erreur de connexion avec le serveur backend.");
+    } finally {
+      setLoading(false);
     }
   };
 
   // Déconnexion
   const handleLogout = () => {
     localStorage.removeItem('mc_molato_logged');
-    localStorage.removeItem('mc_molato_user'); // Supprime l'utilisateur pour vider les données
+    localStorage.removeItem('mc_molato_user');
     setUser(null);
-    setStep('login-email');
+    setStep('login');
     window.location.reload();
   };
 
@@ -154,7 +139,49 @@ export default function Account() {
         </Link>
       </div>
 
-      {/* 1. INSCRIPTION */}
+      {/* 1. CONNEXION (PAR EMAIL OU NOM) */}
+      {step === 'login' && (
+        <div className="bg-gray-50 border border-gray-100 p-8 rounded-[2rem] shadow-sm">
+          <h1 className="text-2xl font-serif font-light mb-2 text-center">Espace Client</h1>
+          <p className="text-xs text-gray-500 text-center mb-6">Connectez-vous avec votre e-mail ou votre nom.</p>
+
+          {message && <div className="mb-4 p-3 bg-red-100 text-red-600 text-xs rounded-xl">{message}</div>}
+
+          <form onSubmit={handleLogin} className="flex flex-col gap-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Votre Adresse Email ou Nom</label>
+              <input 
+                type="text" 
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                placeholder="Ex: Blessing ou blessing@gmail.com"
+                required
+                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-black transition"
+              />
+            </div>
+
+            <button 
+              type="submit"
+              disabled={loading}
+              className="mt-2 w-full bg-black text-white py-3 rounded-xl text-xs font-medium tracking-wider uppercase hover:bg-zinc-800 transition shadow-sm disabled:opacity-50"
+            >
+              {loading ? "Connexion..." : "Se connecter"}
+            </button>
+          </form>
+          
+          <div className="mt-6 text-center border-t border-gray-200/60 pt-4 text-xs">
+            <span className="text-gray-400">Pas encore de compte ? </span>
+            <button 
+              onClick={() => { setStep('register'); setMessage(''); }}
+              className="font-medium text-black underline hover:text-gray-700 transition ml-1"
+            >
+              S'inscrire
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 2. INSCRIPTION */}
       {step === 'register' && (
         <div className="bg-gray-50 border border-gray-100 p-8 rounded-[2rem] shadow-sm">
           <h1 className="text-2xl font-serif font-light mb-2 text-center">Créer un compte</h1>
@@ -200,24 +227,18 @@ export default function Account() {
 
             <button 
               type="submit"
-              className="mt-2 w-full bg-black text-white py-3 rounded-xl text-xs font-medium tracking-wider uppercase hover:bg-zinc-800 transition shadow-sm"
+              disabled={loading}
+              className="mt-2 w-full bg-black text-white py-3 rounded-xl text-xs font-medium tracking-wider uppercase hover:bg-zinc-800 transition shadow-sm disabled:opacity-50"
             >
-              S'inscrire
+              {loading ? "Création..." : "S'inscrire"}
             </button>
           </form>
 
-          <div className="mt-6 text-center border-t border-gray-200/60 pt-4">
-            <span className="text-xs text-gray-400">Déjà un compte ? </span>
+          <div className="mt-6 text-center border-t border-gray-200/60 pt-4 text-xs">
+            <span className="text-gray-400">Déjà un compte ? </span>
             <button 
-              onClick={() => {
-                const saved = localStorage.getItem('mc_molato_user');
-                if (saved) {
-                  const p = JSON.parse(saved);
-                  setLoginEmail(p.email);
-                }
-                setStep('login-email');
-              }} 
-              className="text-xs font-medium text-black underline hover:text-gray-700 transition ml-1"
+              onClick={() => { setStep('login'); setMessage(''); }} 
+              className="font-medium text-black underline hover:text-gray-700 transition ml-1"
             >
               Se connecter
             </button>
@@ -225,87 +246,7 @@ export default function Account() {
         </div>
       )}
 
-      {/* 2. CONNEXION : SAISIE EMAIL */}
-      {step === 'login-email' && (
-        <div className="bg-gray-50 border border-gray-100 p-8 rounded-[2rem] shadow-sm">
-          <h1 className="text-2xl font-serif font-light mb-2 text-center">Connexion</h1>
-          <p className="text-xs text-gray-500 text-center mb-6">Entrez votre email pour recevoir votre code OTP par e-mail.</p>
-
-          {message && <div className="mb-4 p-3 bg-red-100 text-red-600 text-xs rounded-xl">{message}</div>}
-
-          <form onSubmit={handleRequestOtp} className="flex flex-col gap-4">
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Votre Adresse Email</label>
-              <input 
-                type="email" 
-                value={loginEmail}
-                onChange={(e) => setLoginEmail(e.target.value)}
-                placeholder="votre.email@gmail.com"
-                required
-                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-black transition"
-              />
-            </div>
-
-            <button 
-              type="submit"
-              className="mt-2 w-full bg-black text-white py-3 rounded-xl text-xs font-medium tracking-wider uppercase hover:bg-zinc-800 transition shadow-sm"
-            >
-              Envoyer le code OTP
-            </button>
-          </form>
-          
-          <div className="mt-6 text-center border-t border-gray-200/60 pt-4 flex items-center justify-between text-xs">
-            <button 
-              onClick={() => setStep('register')}
-              className="text-gray-400 hover:text-black transition"
-            >
-              Pas encore de compte ? <span className="font-medium underline">S'inscrire</span>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* 3. VÉRIFICATION OTP */}
-      {step === 'verify-otp' && (
-        <div className="bg-gray-50 border border-gray-100 p-8 rounded-[2rem] shadow-sm text-center">
-          <h1 className="text-2xl font-serif font-light mb-2">Vérification d'identité</h1>
-          <p className="text-xs text-gray-500 mb-6">
-            Entrez le code à 4 chiffres envoyé à <span className="font-semibold text-black">{loginEmail}</span>.
-          </p>
-
-          {message && <div className="mb-4 p-3 bg-red-100 text-red-600 text-xs rounded-xl">{message}</div>}
-
-          <form onSubmit={handleVerifyOtp} className="flex flex-col gap-4">
-            <div>
-              <input 
-                type="text" 
-                maxLength="4"
-                value={enteredOtp}
-                onChange={(e) => setEnteredOtp(e.target.value)}
-                placeholder="• • • •"
-                required
-                className="w-full text-center tracking-[1rem] text-xl bg-white border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-black transition"
-              />
-            </div>
-
-            <button 
-              type="submit"
-              className="mt-2 w-full bg-black text-white py-3 rounded-xl text-xs font-medium tracking-wider uppercase hover:bg-zinc-800 transition shadow-sm"
-            >
-              Confirmer et se connecter
-            </button>
-          </form>
-
-          <button 
-            onClick={() => setStep('login-email')}
-            className="mt-4 text-xs text-gray-400 hover:text-black transition"
-          >
-            ← Changer d'adresse email
-          </button>
-        </div>
-      )}
-
-      {/* 4. DASHBOARD */}
+      {/* 3. DASHBOARD */}
       {step === 'dashboard' && user && (
         <div className="bg-gray-50 border border-gray-100 p-8 rounded-[2rem] shadow-sm">
           <div className="text-center mb-8">
@@ -315,7 +256,7 @@ export default function Account() {
             <h1 className="text-2xl font-serif font-medium">{user.name}</h1>
             <p className="text-xs text-gray-500">{user.email}</p>
             <span className="inline-block mt-2 bg-emerald-100 text-emerald-800 text-[10px] font-semibold tracking-wider uppercase px-3 py-1 rounded-full">
-              Client VIP Vérifié ✓
+              Client VIP Mc Molato ✓
             </span>
           </div>
 
@@ -345,8 +286,8 @@ export default function Account() {
               <span className="font-medium text-gray-800">{user.phone || 'Non renseigné'}</span>
             </div>
             <div className="flex justify-between py-1.5">
-              <span className="text-gray-400">Sécurité :</span>
-              <span className="font-medium text-emerald-600">Authentification OTP par e-mail active</span>
+              <span className="text-gray-400">Statut :</span>
+              <span className="font-medium text-emerald-600">Connecté(e) sans code OTP</span>
             </div>
           </div>
 
