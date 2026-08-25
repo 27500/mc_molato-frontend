@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
+import { API_URL } from '../services/api';
 
 const initialProducts = [
   { 
@@ -59,18 +60,29 @@ export default function Shop() {
   const { addToCart } = useCart();
   const { favorites, toggleFavorite } = useFavorites();
 
-  const loadProducts = () => {
-    const customProducts = JSON.parse(localStorage.getItem('mc_molato_custom_products') || '[]');
-    setProducts([...customProducts, ...initialProducts]);
+  // 📌 Chargement des produits depuis le Backend en ligne
+  const loadProducts = async () => {
+    try {
+      const response = await fetch(`${API_URL}/products`);
+      if (response.ok) {
+        const data = await response.json();
+        // Si ton backend renvoie tous les produits (statiques + dynamiques), on les utilise. 
+        // Si ton backend ne renvoie que les dynamiques, on combine avec initialProducts :
+        if (data && data.length > 0) {
+          // On s'assure de fusionner ou d'utiliser les données du serveur
+          setProducts(data);
+        } else {
+          setProducts(initialProducts);
+        }
+      }
+    } catch (error) {
+      console.error("Erreur lors du chargement des produits depuis l'API, utilisation des articles par défaut :", error);
+      setProducts(initialProducts);
+    }
   };
 
   useEffect(() => {
     loadProducts();
-
-    window.addEventListener('custom_products_updated', loadProducts);
-    return () => {
-      window.removeEventListener('custom_products_updated', loadProducts);
-    };
   }, []);
 
   const filteredProducts = products.filter(p => {
@@ -85,8 +97,8 @@ export default function Shop() {
     if (selectedCategory === 'tous') return true;
     return p.category.toLowerCase() === selectedCategory.toLowerCase();
   }).sort((a, b) => {
-    if (sortOrder === 'asc') return (a.rawPrice || 0) - (b.rawPrice || 0);
-    if (sortOrder === 'desc') return (b.rawPrice || 0) - (a.rawPrice || 0);
+    if (sortOrder === 'asc') return (a.rawPrice || a.price || 0) - (b.rawPrice || b.price || 0);
+    if (sortOrder === 'desc') return (b.rawPrice || b.price || 0) - (a.rawPrice || a.price || 0);
     return 0;
   });
 
@@ -142,10 +154,10 @@ export default function Shop() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {filteredProducts.map((product) => {
-            // Comparaison sécurisée des IDs (string et number) pour garder le cœur rouge après actualisation
-            const isFav = favorites.some(fav => String(fav.id) === String(product.id));
+            const productId = product._id || product.id;
+            const isFav = favorites.some(fav => String(fav._id || fav.id) === String(productId));
             return (
-              <div key={product.id} className="bg-gray-50 border border-gray-100 rounded-3xl p-4 flex flex-col justify-between shadow-sm hover:shadow-md transition relative group">
+              <div key={productId} className="bg-gray-50 border border-gray-100 rounded-3xl p-4 flex flex-col justify-between shadow-sm hover:shadow-md transition relative group">
                 
                 <button 
                   onClick={() => toggleFavorite(product)}
@@ -183,7 +195,7 @@ export default function Shop() {
                   </h3>
                   <div className="flex items-center justify-between mt-2">
                     <p className="text-xs font-bold text-black">
-                      {product.priceFormatted || `${product.rawPrice?.toLocaleString()} CDF`}
+                      {product.priceFormatted || `${(product.rawPrice || product.price)?.toLocaleString()} CDF`}
                     </p>
                     <button 
                       onClick={() => addToCart(product)}
@@ -244,7 +256,7 @@ export default function Shop() {
                     {selectedProduct.name}
                   </h2>
                   <p className="text-sm font-bold text-black mb-4">
-                    {selectedProduct.priceFormatted || `${selectedProduct.rawPrice?.toLocaleString()} CDF`}
+                    {selectedProduct.priceFormatted || `${(selectedProduct.rawPrice || selectedProduct.price)?.toLocaleString()} CDF`}
                   </p>
                   <p className="text-xs text-gray-600 leading-relaxed mb-6">
                     {selectedProduct.description || "Aucune description détaillée fournie pour cet article."}

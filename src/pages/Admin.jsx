@@ -26,7 +26,7 @@ export default function Admin() {
   const [mainFile, setMainFile] = useState(null);
   const [mainUrl, setMainUrl] = useState('');
 
-  // Photos supplémentaires (gère dynamiquement 3 photos ou plus)
+  // Photos supplémentaires
   const [extraPhotos, setExtraPhotos] = useState([]);
   const [successMessage, setSuccessMessage] = useState('');
   const [customProducts, setCustomProducts] = useState([]);
@@ -35,16 +35,24 @@ export default function Admin() {
     const authSession = sessionStorage.getItem('mc_molato_admin_verified');
     if (authSession === 'true') {
       setStep('dashboard');
-      loadCustomProducts();
+      loadBackendProducts();
     }
   }, []);
 
-  const loadCustomProducts = () => {
-    const stored = JSON.parse(localStorage.getItem('mc_molato_custom_products') || '[]');
-    setCustomProducts(stored);
+  // 📌 Charger les produits depuis la base de données (Backend)
+  const loadBackendProducts = async () => {
+    try {
+      const response = await fetch(`${API_URL}/products`);
+      if (response.ok) {
+        const data = await response.json();
+        // Si tu veux filtrer ou afficher uniquement les produits personnalisés ou tous les produits de la boutique :
+        setCustomProducts(data);
+      }
+    } catch (error) {
+      console.error("Erreur lors du chargement des produits :", error);
+    }
   };
 
-  // 📌 1. Demander l'envoi du vrai OTP par e-mail via le Backend
   const handleRequestOtp = async (e) => {
     e.preventDefault();
     const cleanEmail = emailInput.trim().toLowerCase();
@@ -80,7 +88,6 @@ export default function Admin() {
     }
   };
 
-  // 📌 2. Vérifier l'OTP via le Backend
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
     const cleanEmail = emailInput.trim().toLowerCase();
@@ -99,7 +106,7 @@ export default function Admin() {
       if (response.ok && data.success) {
         sessionStorage.setItem('mc_molato_admin_verified', 'true');
         setStep('dashboard');
-        loadCustomProducts();
+        loadBackendProducts();
         setMessage('');
       } else {
         setMessage(data.message || 'Code OTP incorrect. Veuillez réessayer.');
@@ -129,7 +136,6 @@ export default function Admin() {
     }));
   };
 
-  // 📌 Utilitaire intelligent : Compresse et convertit l'image en Base64 léger (Anti QuotaExceededError)
   const compressAndConvertImage = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -141,8 +147,6 @@ export default function Admin() {
           const canvas = document.createElement('canvas');
           let width = img.width;
           let height = img.height;
-
-          // Redimensionnement maximal pour garder un poids ultra léger (ex: max 800px)
           const MAX_WIDTH = 800;
           const MAX_HEIGHT = 800;
 
@@ -160,11 +164,8 @@ export default function Admin() {
 
           canvas.width = width;
           canvas.height = height;
-
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, width, height);
-
-          // Compression au format JPEG avec une qualité de 0.7 (70%)
           const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
           resolve(compressedDataUrl);
         };
@@ -174,6 +175,7 @@ export default function Admin() {
     });
   };
 
+  // 📌 Enregistrement de l'article directement sur le Backend (MongoDB)
   const handleAddProduct = async (e) => {
     e.preventDefault();
     
@@ -202,13 +204,11 @@ export default function Admin() {
         }
       }
 
-      const uniqueId = `custom_${Date.now()}`;
-
-      const newProduct = {
-        id: uniqueId,
+      const newProductData = {
         name: name.trim(),
         priceFormatted: `${numericPrice.toLocaleString()} CDF`,
         rawPrice: numericPrice,
+        price: numericPrice, // Sécurité selon ton modèle backend
         category,
         description: description.trim() || 'Aucune description détaillée fournie.',
         image: finalMainImage,
@@ -216,39 +216,52 @@ export default function Admin() {
         isCustom: true
       };
 
-      const existingProducts = JSON.parse(localStorage.getItem('mc_molato_custom_products') || '[]');
-      const updatedProducts = [newProduct, ...existingProducts];
-      
-      localStorage.setItem('mc_molato_custom_products', JSON.stringify(updatedProducts));
-      
-      setCustomProducts(updatedProducts);
-      window.dispatchEvent(new Event('custom_products_updated'));
+      // Envoi de la requête POST vers le serveur backend
+      const response = await fetch(`${API_URL}/products`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newProductData)
+      });
 
-      setSuccessMessage('Article ajouté avec succès à la boutique ! 🎉');
-      setName('');
-      setPrice('');
-      setDescription('');
-      setMainFile(null);
-      setMainUrl('');
-      setExtraPhotos([]);
-
-      setTimeout(() => setSuccessMessage(''), 4000);
+      if (response.ok) {
+        setSuccessMessage('Article publié et sauvegardé sur le serveur pour tous les appareils ! 🎉');
+        setName('');
+        setPrice('');
+        setDescription('');
+        setMainFile(null);
+        setMainUrl('');
+        setExtraPhotos([]);
+        loadBackendProducts(); // Recharger la liste depuis la base de données
+        setTimeout(() => setSuccessMessage(''), 4000);
+      } else {
+        const errData = await response.json();
+        alert(errData.message || "Erreur lors de l'enregistrement sur le serveur.");
+      }
     } catch (err) {
-      console.error("Erreur lors de la compression de l'image :", err);
-      alert("Erreur lors du traitement de l'image. Veuillez essayer une autre image.");
+      console.error("Erreur réseau :", err);
+      alert("Impossible de joindre le serveur pour publier l'article.");
     }
   };
 
-  const handleDeleteProduct = (id) => {
-    if (window.confirm("Êtes-vous sûr de vouloir supprimer cet article de la boutique ?")) {
-      const updatedProducts = customProducts.filter(p => p.id !== id);
-      localStorage.setItem('mc_molato_custom_products', JSON.stringify(updatedProducts));
-      
-      setCustomProducts(updatedProducts);
-      window.dispatchEvent(new Event('custom_products_updated'));
-      
-      setSuccessMessage('Article supprimé avec succès.');
-      setTimeout(() => setSuccessMessage(''), 3000);
+  // 📌 Suppression d'un article sur le Backend
+  const handleDeleteProduct = async (id) => {
+    if (window.confirm("Êtes-vous sûr de vouloir supprimer cet article de la boutique en ligne ?")) {
+      try {
+        const response = await fetch(`${API_URL}/products/${id}`, {
+          method: 'DELETE'
+        });
+
+        if (response.ok) {
+          loadBackendProducts();
+          setSuccessMessage('Article supprimé avec succès.');
+          setTimeout(() => setSuccessMessage(''), 3000);
+        } else {
+          alert("Erreur lors de la suppression sur le serveur.");
+        }
+      } catch (error) {
+        console.error("Erreur réseau :", error);
+        alert("Impossible de contacter le serveur.");
+      }
     }
   };
 
@@ -344,10 +357,9 @@ export default function Admin() {
             Session Admin Sécurisée Validée ✓
           </span>
           <h1 className="text-2xl font-serif font-light mt-3 mb-1">Tableau de Bord Admin</h1>
-          <p className="text-xs text-gray-500">Gérez vos articles et consultez les messages de votre communauté.</p>
+          <p className="text-xs text-gray-500">Gérez vos articles en ligne et visualisables sur tous les appareils.</p>
         </div>
 
-        {/* --- LIEN VERS LA PAGE DES MESSAGES CLIENTS --- */}
         <div className="mb-8">
           <Link 
             to="/admin/messages" 
@@ -370,9 +382,8 @@ export default function Admin() {
           </div>
         )}
 
-        {/* --- FORMULAIRE D'AJOUT --- */}
         <form onSubmit={handleAddProduct} className="flex flex-col gap-4 text-xs mb-12 border-b border-gray-200 pb-10">
-          <h2 className="text-sm font-serif font-medium text-gray-800 mb-[-4px]">➕ Publier un nouvel article</h2>
+          <h2 className="text-sm font-serif font-medium text-gray-800 mb-[-4px]">➕ Publier un nouvel article en ligne</h2>
 
           <div>
             <label className="block font-medium text-gray-600 mb-1">Nom de l'habit</label>
@@ -476,7 +487,7 @@ export default function Admin() {
             </div>
 
             {extraPhotos.map((photo, index) => (
-              <div key={photo.id} className="bg-white p-4 rounded-2xl border border-gray-200 relative">
+              <div key={photo.id || index} className="bg-white p-4 rounded-2xl border border-gray-200 relative">
                 <button
                   type="button"
                   onClick={() => removeExtraPhotoField(photo.id)}
@@ -533,18 +544,17 @@ export default function Admin() {
           </button>
         </form>
 
-        {/* --- GESTION & SUPPRESSION DES ARTICLES --- */}
         <div>
-          <h2 className="text-sm font-serif font-medium text-gray-800 mb-4">🗑️ Gérer et supprimer les articles ajoutés ({customProducts.length})</h2>
+          <h2 className="text-sm font-serif font-medium text-gray-800 mb-4">🗑️ Gérer et supprimer les articles en ligne ({customProducts.length})</h2>
 
           {customProducts.length === 0 ? (
             <p className="text-xs text-gray-400 italic bg-white p-4 rounded-2xl border border-gray-200 text-center">
-              Aucun article personnalisé pour le moment.
+              Aucun article pour le moment.
             </p>
           ) : (
             <div className="space-y-3">
               {customProducts.map((product) => (
-                <div key={product.id} className="bg-white p-3 rounded-2xl border border-gray-200 flex items-center justify-between gap-4">
+                <div key={product._id || product.id} className="bg-white p-3 rounded-2xl border border-gray-200 flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3 overflow-hidden">
                     <img 
                       src={product.image} 
@@ -561,7 +571,7 @@ export default function Admin() {
                   </div>
 
                   <button
-                    onClick={() => handleDeleteProduct(product.id)}
+                    onClick={() => handleDeleteProduct(product._id || product.id)}
                     className="bg-red-50 hover:bg-red-100 text-red-600 px-3 py-2 rounded-xl text-xs font-medium transition flex-shrink-0 flex items-center gap-1"
                   >
                     <span>🗑️</span> Supprimer
