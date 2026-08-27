@@ -21,22 +21,18 @@ export default function Contact() {
     setLoading(true);
     setError(null);
 
-    // Objet structuré prêt pour l'API Backend et MongoDB
     const messageData = {
-      id: Date.now(),
       name: `${formData.prenom} ${formData.nom}`.trim(),
       prenom: formData.prenom.trim(),
       nom: formData.nom.trim(),
       email: formData.email.trim(),
-      message: formData.message.trim(),
-      date: new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+      message: formData.message.trim()
     };
 
     let isSent = false;
 
-    // 1. Envoi vers l'API Backend (prêt pour la production / déploiement)
-    // En production, remplace 'http://localhost:5000' par l'URL de ton serveur déployé (ou utilise une variable d'environnement comme import.meta.env.VITE_API_URL)
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    // Utilisation de la variable d'environnement ou direct sur l'URL de production Render
+    const API_URL = import.meta.env.VITE_API_URL || 'https://mc-molato-backend.onrender.com';
 
     try {
       const response = await fetch(`${API_URL}/api/contact`, {
@@ -50,17 +46,18 @@ export default function Contact() {
       if (response.ok) {
         isSent = true;
       } else {
-        throw new Error("Erreur serveur lors de l'enregistrement.");
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Erreur serveur lors de l'enregistrement.");
       }
     } catch (err) {
-      console.warn("Backend non disponible, passage sur le stockage de secours local (localStorage).", err);
+      console.warn("Erreur de connexion au backend en ligne, passage sur le localStorage.", err);
       
-      // 2. Secours local (localStorage) pour ne pas bloquer si le backend est hors ligne en dev
+      // Secours local si besoin
       try {
         const existingMessages = JSON.parse(localStorage.getItem('mc_molato_contact_messages') || '[]');
-        const updatedMessages = [messageData, ...existingMessages];
+        const updatedMessages = [{ ...messageData, id: Date.now() }, ...existingMessages];
         localStorage.setItem('mc_molato_contact_messages', JSON.stringify(updatedMessages));
-        isSent = true; // Permet de valider l'envoi visuellement même sans serveur en local
+        isSent = true; 
       } catch (localErr) {
         console.error("Erreur localStorage:", localErr);
       }
