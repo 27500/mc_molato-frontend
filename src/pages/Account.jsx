@@ -10,10 +10,12 @@ export default function Account() {
   // États du formulaire d'inscription
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
 
-  // État pour la connexion directe (par e-mail ou nom)
-  const [identifier, setIdentifier] = useState('');
+  // États pour la connexion par e-mail et mot de passe
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
   
   const [user, setUser] = useState(null);
   const [message, setMessage] = useState('');
@@ -35,10 +37,10 @@ export default function Account() {
     }
   }, []);
 
-  // Inscription connectée au Backend
+  // Inscription sécurisée connectée au Backend
   const handleRegister = async (e) => {
     e.preventDefault();
-    if (!name || !email) {
+    if (!name || !email || !password) {
       setMessage('Veuillez remplir tous les champs obligatoires.');
       return;
     }
@@ -50,7 +52,7 @@ export default function Account() {
       const response = await fetch(`${API_URL}/users/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, phone })
+        body: JSON.stringify({ name, email, password, phone })
       });
       const data = await response.json();
 
@@ -74,11 +76,11 @@ export default function Account() {
     }
   };
 
-  // Connexion directe par Email ou Nom (Sans OTP)
+  // Connexion sécurisée par Email et Mot de passe
   const handleLogin = async (e) => {
     e.preventDefault();
-    if (!identifier) {
-      setMessage('Veuillez entrer votre e-mail ou votre nom.');
+    if (!loginEmail || !loginPassword) {
+      setMessage('Veuillez entrer votre e-mail et votre mot de passe.');
       return;
     }
 
@@ -89,12 +91,12 @@ export default function Account() {
       const response = await fetch(`${API_URL}/users/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier: identifier.trim() })
+        body: JSON.stringify({ email: loginEmail.trim(), password: loginPassword })
       });
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        setMessage(data.message || 'Compte introuvable. Veuillez vous inscrire.');
+        setMessage(data.message || 'E-mail ou mot de passe incorrect.');
         setLoading(false);
         return;
       }
@@ -139,22 +141,34 @@ export default function Account() {
         </Link>
       </div>
 
-      {/* 1. CONNEXION (PAR EMAIL OU NOM) */}
+      {/* 1. CONNEXION (PAR EMAIL & MOT DE PASSE) */}
       {step === 'login' && (
         <div className="bg-gray-50 border border-gray-100 p-8 rounded-[2rem] shadow-sm">
-          <h1 className="text-2xl font-serif font-light mb-2 text-center">Espace Client</h1>
-          <p className="text-xs text-gray-500 text-center mb-6">Connectez-vous avec votre e-mail ou votre nom.</p>
+          <h1 className="text-2xl font-serif font-light mb-2 text-center">Connexion Sécurisée</h1>
+          <p className="text-xs text-gray-500 text-center mb-6">Entrez vos identifiants pour accéder à votre compte.</p>
 
           {message && <div className="mb-4 p-3 bg-red-100 text-red-600 text-xs rounded-xl">{message}</div>}
 
           <form onSubmit={handleLogin} className="flex flex-col gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Votre Adresse Email ou Nom</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Adresse Email</label>
               <input 
-                type="text" 
-                value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
-                placeholder="Ex: Blessing ou blessing@gmail.com"
+                type="email" 
+                value={loginEmail}
+                onChange={(e) => setLoginEmail(e.target.value)}
+                placeholder="votre.email@gmail.com"
+                required
+                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-black transition"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Mot de passe</label>
+              <input 
+                type="password" 
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                placeholder="••••••••"
                 required
                 className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-black transition"
               />
@@ -163,7 +177,7 @@ export default function Account() {
             <button 
               type="submit"
               disabled={loading}
-              className="mt-2 w-full bg-black text-white py-3 rounded-xl text-xs font-medium tracking-wider uppercase hover:bg-zinc-800 transition shadow-sm disabled:opacity-50"
+              className="mt-2 w-full bg-black text-white py-3 rounded-xl text-xs font-medium tracking-wider uppercase hover:bg-zinc-800 transition shadow-sm disabled:opacity-50 cursor-pointer"
             >
               {loading ? "Connexion..." : "Se connecter"}
             </button>
@@ -173,7 +187,7 @@ export default function Account() {
             <span className="text-gray-400">Pas encore de compte ? </span>
             <button 
               onClick={() => { setStep('register'); setMessage(''); }}
-              className="font-medium text-black underline hover:text-gray-700 transition ml-1"
+              className="font-medium text-black underline hover:text-gray-700 transition ml-1 cursor-pointer"
             >
               S'inscrire
             </button>
@@ -185,7 +199,7 @@ export default function Account() {
       {step === 'register' && (
         <div className="bg-gray-50 border border-gray-100 p-8 rounded-[2rem] shadow-sm">
           <h1 className="text-2xl font-serif font-light mb-2 text-center">Créer un compte</h1>
-          <p className="text-xs text-gray-500 text-center mb-6">Rejoignez Mc Molato pour suivre vos commandes et favoris.</p>
+          <p className="text-xs text-gray-500 text-center mb-6">Rejoignez Mc Molato pour suivre vos commandes et favoris en toute sécurité.</p>
 
           {message && <div className="mb-4 p-3 bg-red-100 text-red-600 text-xs rounded-xl">{message}</div>}
 
@@ -215,6 +229,18 @@ export default function Account() {
             </div>
 
             <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Mot de passe</label>
+              <input 
+                type="password" 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Choisissez un mot de passe sécurisé"
+                required
+                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-black transition"
+              />
+            </div>
+
+            <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Numéro de téléphone (optionnel)</label>
               <input 
                 type="text" 
@@ -228,7 +254,7 @@ export default function Account() {
             <button 
               type="submit"
               disabled={loading}
-              className="mt-2 w-full bg-black text-white py-3 rounded-xl text-xs font-medium tracking-wider uppercase hover:bg-zinc-800 transition shadow-sm disabled:opacity-50"
+              className="mt-2 w-full bg-black text-white py-3 rounded-xl text-xs font-medium tracking-wider uppercase hover:bg-zinc-800 transition shadow-sm disabled:opacity-50 cursor-pointer"
             >
               {loading ? "Création..." : "S'inscrire"}
             </button>
@@ -238,7 +264,7 @@ export default function Account() {
             <span className="text-gray-400">Déjà un compte ? </span>
             <button 
               onClick={() => { setStep('login'); setMessage(''); }} 
-              className="font-medium text-black underline hover:text-gray-700 transition ml-1"
+              className="font-medium text-black underline hover:text-gray-700 transition ml-1 cursor-pointer"
             >
               Se connecter
             </button>
@@ -286,14 +312,14 @@ export default function Account() {
               <span className="font-medium text-gray-800">{user.phone || 'Non renseigné'}</span>
             </div>
             <div className="flex justify-between py-1.5">
-              <span className="text-gray-400">Statut :</span>
-              <span className="font-medium text-emerald-600">Connecté(e) sans code OTP</span>
+              <span className="text-gray-400">Sécurité :</span>
+              <span className="font-medium text-emerald-600">Compte protégé par mot de passe ✓</span>
             </div>
           </div>
 
           <button 
             onClick={handleLogout}
-            className="w-full border border-gray-300 hover:bg-gray-100 text-gray-800 py-3 rounded-xl text-xs font-medium tracking-wider uppercase transition"
+            className="w-full border border-gray-300 hover:bg-gray-100 text-gray-800 py-3 rounded-xl text-xs font-medium tracking-wider uppercase transition cursor-pointer"
           >
             Se déconnecter
           </button>
