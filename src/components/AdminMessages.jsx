@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 export default function AdminMessages() {
   const [messages, setMessages] = useState([]);
   const [successMessage, setSuccessMessage] = useState('');
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -16,15 +17,30 @@ export default function AdminMessages() {
     loadMessages();
   }, [navigate]);
 
-  const loadMessages = () => {
-    const storedMessages = JSON.parse(localStorage.getItem('mc_molato_contact_messages') || '[]');
-    setMessages(storedMessages);
+  const loadMessages = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('https://mc-molato-backend.onrender.com/api/contact/messages');
+      const data = await response.json();
+      if (data.success) {
+        // Normalisation des IDs MongoDB (_id -> id) pour que les boutons de suppression fonctionnent
+        const formattedMessages = data.messages.map(msg => ({
+          ...msg,
+          id: msg._id || msg.id
+        }));
+        setMessages(formattedMessages);
+      }
+    } catch (err) {
+      console.error("Erreur lors du chargement des messages depuis l'API:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDeleteMessage = (id) => {
+  const handleDeleteMessage = async (id) => {
     if (window.confirm("Voulez-vous vraiment supprimer ce message ?")) {
+      // Pour l'instant, suppression locale de l'affichage (tu pourras ajouter une route DELETE sur le backend si besoin)
       const updatedMessages = messages.filter(msg => msg.id !== id);
-      localStorage.setItem('mc_molato_contact_messages', JSON.stringify(updatedMessages));
       setMessages(updatedMessages);
       setSuccessMessage('Message supprimé avec succès.');
       setTimeout(() => setSuccessMessage(''), 3000);
@@ -32,8 +48,7 @@ export default function AdminMessages() {
   };
 
   const handleClearAll = () => {
-    if (window.confirm("Êtes-vous sûr de vouloir vider tous les messages reçus ?")) {
-      localStorage.removeItem('mc_molato_contact_messages');
+    if (window.confirm("Êtes-vous sûr de vouloir vider tous les messages affichés ?")) {
       setMessages([]);
       setSuccessMessage('Tous les messages ont été effacés.');
       setTimeout(() => setSuccessMessage(''), 3000);
@@ -59,7 +74,7 @@ export default function AdminMessages() {
           <div className="w-12 h-12 bg-black text-white rounded-full flex items-center justify-center mx-auto mb-3 text-lg shadow-sm">
             📬
           </div>
-          <h1 className="text-2xl font-serif font-light mb-1">Messages de la Page À propos</h1>
+          <h1 className="text-2xl font-serif font-light mb-1">Messages de la Page Contact</h1>
           <p className="text-xs text-gray-500">Consultez les requêtes et avis envoyés directement par vos visiteurs.</p>
         </div>
 
@@ -76,14 +91,18 @@ export default function AdminMessages() {
           {messages.length > 0 && (
             <button
               onClick={handleClearAll}
-              className="text-xs text-red-600 hover:text-red-800 font-medium transition"
+              className="text-xs text-red-600 hover:text-red-800 font-medium transition cursor-pointer"
             >
               Tout effacer 🗑️
             </button>
           )}
         </div>
 
-        {messages.length === 0 ? (
+        {loading ? (
+          <div className="bg-white p-12 rounded-2xl border border-gray-200 text-center">
+            <p className="text-xs text-gray-400 italic">Chargement des messages...</p>
+          </div>
+        ) : messages.length === 0 ? (
           <div className="bg-white p-12 rounded-2xl border border-gray-200 text-center">
             <p className="text-xs text-gray-400 italic">Aucun message reçu pour le moment.</p>
           </div>
@@ -101,11 +120,11 @@ export default function AdminMessages() {
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-[10px] text-gray-400 bg-gray-50 px-2.5 py-1 rounded-full border border-gray-100">
-                      {msg.date || 'Récemment'}
+                      {msg.createdAt ? new Date(msg.createdAt).toLocaleDateString() : 'Récemment'}
                     </span>
                     <button
                       onClick={() => handleDeleteMessage(msg.id)}
-                      className="text-red-500 hover:text-red-700 text-xs p-1"
+                      className="text-red-500 hover:text-red-700 text-xs p-1 cursor-pointer"
                       title="Supprimer ce message"
                     >
                       ✕
