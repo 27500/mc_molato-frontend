@@ -31,11 +31,11 @@ export default function Contact() {
 
     let isSent = false;
 
-    // Utilisation de la variable d'environnement ou direct sur l'URL de production Render
-    const API_URL = import.meta.env.VITE_API_URL || 'https://mc-molato-backend.onrender.com';
+    // URL EN DUR : impossible d'avoir un double /api/api avec ça !
+    const FIXED_URL = 'https://mc-molato-backend.onrender.com/api/contact';
 
     try {
-      const response = await fetch(`${API_URL}/api/contact`, {
+      const response = await fetch(FIXED_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -47,12 +47,10 @@ export default function Contact() {
         isSent = true;
       } else {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Erreur serveur lors de l'enregistrement.");
+        throw new Error(errorData.message || "Erreur serveur.");
       }
     } catch (err) {
-      console.warn("Erreur de connexion au backend en ligne, passage sur le localStorage.", err);
-      
-      // Secours local si besoin
+      console.warn("Erreur réseau, passage sur localStorage", err);
       try {
         const existingMessages = JSON.parse(localStorage.getItem('mc_molato_contact_messages') || '[]');
         const updatedMessages = [{ ...messageData, id: Date.now() }, ...existingMessages];
@@ -68,7 +66,7 @@ export default function Contact() {
     if (isSent) {
       setSubmitted(true);
     } else {
-      setError("Impossible d'envoyer le message pour le moment. Veuillez réessayer plus tard.");
+      setError("Impossible d'envoyer le message.");
     }
   };
 
