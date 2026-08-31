@@ -9,8 +9,8 @@ const initialProducts = [
     id: 1, 
     name: 'Boubou Royal Tissé Main', 
     category: 'homme', 
-    priceFormatted: '120.000 CDF', 
-    rawPrice: 120000, 
+    priceFormatted: '65 $', 
+    rawPrice: 65, 
     image: '/homme.jpeg', 
     images: ['/homme.jpeg', '/style.jpeg'],
     description: 'Magnifique boubou traditionnel tissé à la main, idéal pour les grandes cérémonies.'
@@ -19,8 +19,8 @@ const initialProducts = [
     id: 2, 
     name: 'Ensemble Élégance Africaine', 
     category: 'femme', 
-    priceFormatted: '135.000 CDF', 
-    rawPrice: 135000, 
+    priceFormatted: '75 $', 
+    rawPrice: 75, 
     image: '/femme.jpeg', 
     images: ['/femme.jpeg', '/mode.jpeg'],
     description: 'Ensemble féminin moderne aux motifs riches et authentiques.'
@@ -29,8 +29,8 @@ const initialProducts = [
     id: 3, 
     name: 'Chemise Traditionnelle Moderne', 
     category: 'homme', 
-    priceFormatted: '85.000 CDF', 
-    rawPrice: 85000, 
+    priceFormatted: '45 $', 
+    rawPrice: 45, 
     image: '/style.jpeg', 
     images: ['/style.jpeg'],
     description: 'Chemise élégante alliant tradition et coupes contemporaines.'
@@ -39,8 +39,8 @@ const initialProducts = [
     id: 4, 
     name: 'Robe de Cérémonie Bogolan', 
     category: 'femme', 
-    priceFormatted: '175.000 CDF', 
-    rawPrice: 175000, 
+    priceFormatted: '95 $', 
+    rawPrice: 95, 
     image: '/mode.jpeg', 
     images: ['/mode.jpeg'],
     description: 'Robe digne de royauté inspirée des motifs traditionnels Bogolan.'
@@ -66,10 +66,7 @@ export default function Shop() {
       const response = await fetch(`${API_URL}/products`);
       if (response.ok) {
         const data = await response.json();
-        // Si ton backend renvoie tous les produits (statiques + dynamiques), on les utilise. 
-        // Si ton backend ne renvoie que les dynamiques, on combine avec initialProducts :
         if (data && data.length > 0) {
-          // On s'assure de fusionner ou d'utiliser les données du serveur
           setProducts(data);
         } else {
           setProducts(initialProducts);
@@ -195,7 +192,7 @@ export default function Shop() {
                   </h3>
                   <div className="flex items-center justify-between mt-2">
                     <p className="text-xs font-bold text-black">
-                      {product.priceFormatted || `${(product.rawPrice || product.price)?.toLocaleString()} CDF`}
+                      {product.priceFormatted || `${(product.rawPrice || product.price)?.toLocaleString()} $`}
                     </p>
                     <button 
                       onClick={() => addToCart(product)}
@@ -256,7 +253,7 @@ export default function Shop() {
                     {selectedProduct.name}
                   </h2>
                   <p className="text-sm font-bold text-black mb-4">
-                    {selectedProduct.priceFormatted || `${(selectedProduct.rawPrice || selectedProduct.price)?.toLocaleString()} CDF`}
+                    {selectedProduct.priceFormatted || `${(selectedProduct.rawPrice || selectedProduct.price)?.toLocaleString()} $`}
                   </p>
                   <p className="text-xs text-gray-600 leading-relaxed mb-6">
                     {selectedProduct.description || "Aucune description détaillée fournie pour cet article."}

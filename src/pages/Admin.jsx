@@ -45,7 +45,6 @@ export default function Admin() {
       const response = await fetch(`${API_URL}/products`);
       if (response.ok) {
         const data = await response.json();
-        // Si tu veux filtrer ou afficher uniquement les produits personnalisés ou tous les produits de la boutique :
         setCustomProducts(data);
       }
     } catch (error) {
@@ -175,7 +174,7 @@ export default function Admin() {
     });
   };
 
-  // 📌 Enregistrement de l'article directement sur le Backend (MongoDB)
+  // 📌 Enregistrement de l'article avec le prix en dollars ($)
   const handleAddProduct = async (e) => {
     e.preventDefault();
     
@@ -206,9 +205,9 @@ export default function Admin() {
 
       const newProductData = {
         name: name.trim(),
-        priceFormatted: `${numericPrice.toLocaleString()} CDF`,
+        priceFormatted: `${numericPrice.toLocaleString()} $`, // 👈 Format en dollars
         rawPrice: numericPrice,
-        price: numericPrice, // Sécurité selon ton modèle backend
+        price: numericPrice, 
         category,
         description: description.trim() || 'Aucune description détaillée fournie.',
         image: finalMainImage,
@@ -216,7 +215,6 @@ export default function Admin() {
         isCustom: true
       };
 
-      // Envoi de la requête POST vers le serveur backend
       const response = await fetch(`${API_URL}/products`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -224,14 +222,14 @@ export default function Admin() {
       });
 
       if (response.ok) {
-        setSuccessMessage('Article publié et sauvegardé sur le serveur pour tous les appareils ! 🎉');
+        setSuccessMessage('Article publié et sauvegardé en Dollars ($) sur le serveur ! 🎉');
         setName('');
         setPrice('');
         setDescription('');
         setMainFile(null);
         setMainUrl('');
         setExtraPhotos([]);
-        loadBackendProducts(); // Recharger la liste depuis la base de données
+        loadBackendProducts();
         setTimeout(() => setSuccessMessage(''), 4000);
       } else {
         const errData = await response.json();
@@ -243,7 +241,6 @@ export default function Admin() {
     }
   };
 
-  // 📌 Suppression d'un article sur le Backend
   const handleDeleteProduct = async (id) => {
     if (window.confirm("Êtes-vous sûr de vouloir supprimer cet article de la boutique en ligne ?")) {
       try {
@@ -399,12 +396,12 @@ export default function Admin() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block font-medium text-gray-600 mb-1">Prix (en CDF)</label>
+              <label className="block font-medium text-gray-600 mb-1">Prix (en $)</label>
               <input 
                 type="number" 
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
-                placeholder="Ex: 120000" 
+                placeholder="Ex: 50" 
                 required
                 className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-black transition"
               />
@@ -565,7 +562,7 @@ export default function Admin() {
                     <div className="truncate">
                       <h4 className="font-serif text-xs font-medium text-gray-900 truncate">{product.name}</h4>
                       <p className="text-[10px] text-gray-500 font-bold mt-0.5">
-                        {product.priceFormatted || `${product.rawPrice?.toLocaleString()} CDF`} • <span className="uppercase text-[9px] bg-gray-100 px-1.5 py-0.5 rounded">{product.category}</span>
+                        {product.priceFormatted || `${product.rawPrice?.toLocaleString()} $`} • <span className="uppercase text-[9px] bg-gray-100 px-1.5 py-0.5 rounded">{product.category}</span>
                       </p>
                     </div>
                   </div>
