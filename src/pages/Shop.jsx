@@ -37,7 +37,7 @@ const initialProducts = [
   },
   { 
     id: 4, 
-    name: 'Robe de Cérémonie Bogolan', 
+    name: 'Robe de ceremonie ', 
     category: 'femme', 
     priceFormatted: '95 $', 
     rawPrice: 95, 
