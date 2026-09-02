@@ -7,7 +7,7 @@ import { API_URL } from '../services/api';
 const initialProducts = [
   { 
     id: 1, 
-    name: 'Boubou Royal Tissé Main', 
+    name: 'Boubou ', 
     category: 'homme', 
     priceFormatted: '65 $', 
     rawPrice: 65, 
@@ -17,7 +17,7 @@ const initialProducts = [
   },
   { 
     id: 2, 
-    name: 'Ensemble Élégance Africaine', 
+    name: 'robe soirée', 
     category: 'femme', 
     priceFormatted: '75 $', 
     rawPrice: 75, 
@@ -27,7 +27,7 @@ const initialProducts = [
   },
   { 
     id: 3, 
-    name: 'Chemise Traditionnelle Moderne', 
+    name: 'robe en soie', 
     category: 'homme', 
     priceFormatted: '45 $', 
     rawPrice: 45, 
