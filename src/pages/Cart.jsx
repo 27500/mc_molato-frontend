@@ -29,10 +29,10 @@ export default function Cart() {
     cart.forEach((item) => {
       const unitPrice = getSafePrice(item);
       const qty = Number(item.quantity) || 1;
-      message += `- ${item.name} (${qty}x) : ${(unitPrice * qty).toLocaleString()} CDF\n`;
+      message += `- ${item.name} (${qty}x) : ${(unitPrice * qty).toLocaleString()} $\n`;
     });
     
-    message += `\n*Total général : ${totalGeneral.toLocaleString()} CDF*`;
+    message += `\n*Total général : ${totalGeneral.toLocaleString()} $*`;
     
     const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
