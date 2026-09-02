@@ -76,7 +76,7 @@ export default function Cart() {
                   <div>
                     <span className="text-[10px] uppercase font-semibold text-gray-400 tracking-wider block mb-1">{item.category}</span>
                     <h3 className="font-serif text-sm font-medium text-gray-900 mb-1">{item.name}</h3>
-                    <p className="text-xs font-bold text-black">{unitPrice.toLocaleString()} CDF</p>
+                    <p className="text-xs font-bold text-black">{unitPrice.toLocaleString()} $</p>
                   </div>
                 </div>
 
@@ -88,7 +88,7 @@ export default function Cart() {
                   </div>
 
                   <p className="text-xs font-bold text-black min-w-[80px] text-right">
-                    {(unitPrice * qty).toLocaleString()} CDF
+                    {(unitPrice * qty).toLocaleString()} $
                   </p>
 
                   <button 
@@ -109,7 +109,7 @@ export default function Cart() {
           
           <div className="flex justify-between items-center mb-6 pb-6 border-b border-gray-200">
             <span className="text-xs text-gray-500">Total général</span>
-            <span className="text-base font-bold text-black">{totalGeneral.toLocaleString()} CDF</span>
+            <span className="text-base font-bold text-black">{totalGeneral.toLocaleString()} $</span>
           </div>
 
           <p className="text-[11px] text-gray-400 mb-6 leading-relaxed">
