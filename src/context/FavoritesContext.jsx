@@ -24,7 +24,6 @@ export function FavoritesProvider({ children }) {
       const savedUser = localStorage.getItem('mc_molato_user');
       
       if (!savedUser) {
-        // Aucun utilisateur connecté : vider les favoris affichés
         setFavorites([]);
         return;
       }
@@ -33,7 +32,7 @@ export function FavoritesProvider({ children }) {
         const user = JSON.parse(savedUser);
         const storageKey = `mc_molato_favorites_${user.email}`;
 
-        // 1. Charger d'abord depuis le stockage local spécifique à cet utilisateur (affichage instantané)
+        // 1. Charger depuis le stockage local (affichage instantané)
         const localFavs = localStorage.getItem(storageKey);
         if (localFavs) {
           setFavorites(JSON.parse(localFavs));
@@ -53,7 +52,8 @@ export function FavoritesProvider({ children }) {
             
             // Fusionner avec les favoris locaux pour ne rien perdre
             prevFavs.forEach(localFav => {
-              if (!combined.some(item => String(item.id) === String(localFav.id))) {
+              const localId = localFav._id || localFav.id;
+              if (!combined.some(item => String(item._id || item.id) === String(localId))) {
                 combined.push(localFav);
               }
             });
@@ -69,7 +69,6 @@ export function FavoritesProvider({ children }) {
 
     loadFavorites();
 
-    // Écouter les changements de connexion/déconnexion en temps réel via le localStorage
     const handleStorageChange = () => {
       loadFavorites();
     };
@@ -77,7 +76,7 @@ export function FavoritesProvider({ children }) {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // Fonction pour ajouter ou retirer un favori
+  // Fonction pour ajouter ou retirer un favori de manière ultra-sécurisée
   const toggleFavorite = async (product) => {
     const savedUser = localStorage.getItem('mc_molato_user');
     if (!savedUser) {
@@ -85,9 +84,13 @@ export function FavoritesProvider({ children }) {
       return;
     }
 
-    // Conserver l'image originale sans la corrompre
+    // Récupérer l'ID qu'il vienne de MongoDB (_id) ou d'un objet classique (id)
+    const productId = product._id || product.id;
+
+    // Conserver l'objet propre avec son _id et son id préservés
     const cleanProduct = {
-      id: product.id,
+      _id: product._id || product.id,
+      id: product.id || product._id,
       name: product.name,
       category: product.category,
       priceFormatted: product.priceFormatted,
@@ -97,16 +100,30 @@ export function FavoritesProvider({ children }) {
       description: product.description
     };
 
-    const isAlreadyFavorite = favorites.some((fav) => String(fav.id) === String(cleanProduct.id));
+    // Vérifier l'existence en comparant _id ou id de manière universelle
+    const isAlreadyFavorite = favorites.some((fav) => {
+      const favId = fav._id || fav.id;
+      return String(favId) === String(productId);
+    });
+
     let updatedFavorites;
 
     if (isAlreadyFavorite) {
-      updatedFavorites = favorites.filter((fav) => String(fav.id) !== String(cleanProduct.id));
+      // Retirer des favoris
+      updatedFavorites = favorites.filter((fav) => {
+        const favId = fav._id || fav.id;
+        return String(favId) !== String(productId);
+      });
     } else {
-      updatedFavorites = [...favorites, cleanProduct];
+      // Ajouter aux favoris (on s'assure de ne pas dupliquer)
+      if (!favorites.some(fav => String(fav._id || fav.id) === String(productId))) {
+        updatedFavorites = [...favorites, cleanProduct];
+      } else {
+        updatedFavorites = [...favorites];
+      }
     }
 
-    // Mise à jour de l'interface et du stockage local propre à l'utilisateur
+    // Mise à jour de l'état et du stockage local
     setFavorites(updatedFavorites);
     const storageKey = getLocalStorageKey();
     if (storageKey) {
