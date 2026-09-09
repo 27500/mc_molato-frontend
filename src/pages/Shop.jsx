@@ -5,56 +5,13 @@ import { useFavorites } from '../context/FavoritesContext';
 import { API_URL } from '../services/api';
 import ScrollReveal from '../components/ScrollReveal';
 
-const initialProducts = [
-  { 
-    id: 1, 
-    name: 'Boubou ', 
-    category: 'homme', 
-    priceFormatted: '65 $', 
-    rawPrice: 65, 
-    image: '/homme.jpeg', 
-    images: ['/homme.jpeg', '/style.jpeg'],
-    description: 'Magnifique boubou traditionnel tissé à la main, idéal pour les grandes cérémonies.'
-  },
-  { 
-    id: 2, 
-    name: 'robe soirée', 
-    category: 'femme', 
-    priceFormatted: '75 $', 
-    rawPrice: 75, 
-    image: '/femme.jpeg', 
-    images: ['/femme.jpeg', '/mode.jpeg'],
-    description: 'Ensemble féminin moderne aux motifs riches et authentiques.'
-  },
-  { 
-    id: 3, 
-    name: 'robe en soie', 
-    category: 'homme', 
-    priceFormatted: '45 $', 
-    rawPrice: 45, 
-    image: '/style.jpeg', 
-    images: ['/style.jpeg'],
-    description: 'Chemise élégante alliant tradition et coupes contemporaines.'
-  },
-  { 
-    id: 4, 
-    name: 'Robe de ceremonie ', 
-    category: 'femme', 
-    priceFormatted: '95 $', 
-    rawPrice: 95, 
-    image: '/mode.jpeg', 
-    images: ['/mode.jpeg'],
-    description: 'Robe digne de royauté inspirée des motifs traditionnels Bogolan.'
-  },
-];
-
 export default function Shop() {
   const [searchParams] = useSearchParams();
   const searchQuery = searchParams.get('search') || '';
 
   const [selectedCategory, setSelectedCategory] = useState('tous');
   const [sortOrder, setSortOrder] = useState('default');
-  const [products, setProducts] = useState(initialProducts);
+  const [products, setProducts] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   
@@ -70,15 +27,12 @@ export default function Shop() {
       const response = await fetch(`${API_URL}/products`);
       if (response.ok) {
         const data = await response.json();
-        if (data && data.length > 0) {
+        if (data && Array.isArray(data)) {
           setProducts(data);
-        } else {
-          setProducts(initialProducts);
         }
       }
     } catch (error) {
-      console.error("Erreur lors du chargement des produits depuis l'API, utilisation des articles par défaut :", error);
-      setProducts(initialProducts);
+      console.error("Erreur lors du chargement des produits depuis l'API :", error);
     }
   };
 
@@ -100,12 +54,12 @@ export default function Shop() {
       const query = searchQuery.toLowerCase().trim();
       return (
         p.name.toLowerCase().includes(query) || 
-        p.category.toLowerCase().includes(query) ||
+        (p.category && p.category.toLowerCase().includes(query)) ||
         (p.description && p.description.toLowerCase().includes(query))
       );
     }
     if (selectedCategory === 'tous') return true;
-    return p.category.toLowerCase() === selectedCategory.toLowerCase();
+    return p.category && p.category.toLowerCase() === selectedCategory.toLowerCase();
   }).sort((a, b) => {
     if (sortOrder === 'asc') return (a.rawPrice || a.price || 0) - (b.rawPrice || b.price || 0);
     if (sortOrder === 'desc') return (b.rawPrice || b.price || 0) - (a.rawPrice || a.price || 0);
@@ -164,10 +118,14 @@ export default function Shop() {
       {filteredProducts.length === 0 ? (
         <ScrollReveal animation="fade-up" delay={200}>
           <div className="text-center py-20 bg-gray-50 rounded-3xl border border-gray-100 max-w-md mx-auto">
-            <p className="text-sm text-gray-600 mb-4 font-medium">Aucun article ne correspond à "{searchQuery}".</p>
-            <Link to="/boutique" className="inline-block bg-black text-white text-xs px-6 py-3 rounded-xl uppercase tracking-wider hover:bg-zinc-800 transition">
-              Voir toute la boutique
-            </Link>
+            <p className="text-sm text-gray-600 mb-4 font-medium">
+              {searchQuery ? `Aucun article ne correspond à "${searchQuery}".` : "Aucun article disponible pour le moment."}
+            </p>
+            {searchQuery && (
+              <Link to="/boutique" className="inline-block bg-black text-white text-xs px-6 py-3 rounded-xl uppercase tracking-wider hover:bg-zinc-800 transition">
+                Voir toute la boutique
+              </Link>
+            )}
           </div>
         </ScrollReveal>
       ) : (
@@ -181,7 +139,7 @@ export default function Shop() {
               <ScrollReveal key={productId} animation="fade-up" delay={100 + (index % 4) * 50}>
                 <div className="bg-gray-50 border border-gray-100 rounded-3xl p-4 flex flex-col justify-between shadow-sm hover:shadow-md transition relative group h-full">
                   
-                  {/* Bouton Favori avec changement de couleur dynamique */}
+                  {/* Bouton Favori avec vérification robuste par ID */}
                   <button 
                     onClick={() => toggleFavorite(product)}
                     className={`absolute top-7 right-7 z-10 backdrop-blur-md p-2 rounded-full text-sm shadow-sm hover:scale-110 transition ${
@@ -224,7 +182,7 @@ export default function Shop() {
                         {product.priceFormatted || `${(product.rawPrice || product.price)?.toLocaleString()} $`}
                       </p>
                       
-                      {/* Bouton Panier avec signal visuel anti-spam de clics */}
+                      {/* Bouton Panier */}
                       <button 
                         onClick={() => handleAddToCart(product)}
                         disabled={isJustAdded}
