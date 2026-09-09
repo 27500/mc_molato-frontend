@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import ScrollReveal from '../components/ScrollReveal';
 
 export default function Home() {
   // Optimisation SEO : Mise à jour du titre et de la description pour Google
@@ -23,7 +22,6 @@ export default function Home() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         
         {/* Grand bloc principal à gauche */}
-        <ScrollReveal animation="fade-up" delay={200}>
         <div className="lg:col-span-2 relative rounded-[2.5rem] overflow-hidden bg-gray-900 min-h-[420px] md:min-h-[480px] flex items-center p-8 md:p-12 shadow-sm">
           <img 
             src="/couple.jpeg"
@@ -44,11 +42,9 @@ export default function Home() {
             </Link>
           </div>
         </div>
-        </ScrollReveal>
 
         {/* Colonne de droite : Blocs "Femme" et "Homme" */}
         <div className="flex flex-col gap-5">
-          <ScrollReveal animation="fade-up" delay={200}>
           <Link to="/boutique?category=femme" className="relative rounded-[2rem] overflow-hidden bg-gray-100 h-[225px] group block">
             <img 
               src="/femme.jpeg" 
@@ -59,9 +55,7 @@ export default function Home() {
               Femme ↗
             </div>
           </Link>
-          </ScrollReveal>
 
-          <ScrollReveal animation="fade-up" delay={200}>
           <Link to="/boutique?category=homme" className="relative rounded-[2rem] overflow-hidden bg-gray-100 h-[225px] group block">
             <img 
               src="/homme.jpeg" 
@@ -72,15 +66,12 @@ export default function Home() {
               Homme ↗
             </div>
           </Link>
-          </ScrollReveal>
         </div>
 
       </div>{/* Fin de la grille du haut */}
 
       {/* ================= LIGNE DU BAS ================= */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        
-        <ScrollReveal animation="fade-up" delay={200}>
           {/* Carte 1 */}
           <div className="relative rounded-[2rem] overflow-hidden bg-gray-200 h-[280px] p-6 flex flex-col justify-end group">
             <img 
@@ -99,9 +90,7 @@ export default function Home() {
             </div>
           </div>
         </div>
-        </ScrollReveal>
         {/* Carte 2 */}
-        <ScrollReveal animation="fade-up" delay={200}>
           <div className="relative rounded-[2rem] overflow-hidden bg-gray-200 h-[280px] p-6 flex flex-col justify-end group">
             <img 
               src="/style.jpeg" 
@@ -119,9 +108,7 @@ export default function Home() {
             </div>
           </div>
         </div>
-        </ScrollReveal>
         {/* Carte 3 */}
-        <ScrollReveal animation="fade-up" delay={200}>
         <div className="bg-[#f7f7f7] border border-gray-200/80 rounded-[2rem] p-8 flex flex-col justify-between h-[280px]">
           <div>
             <h2 className="text-3xl font-serif text-gray-900 mb-3">Portez la tradition</h2>
@@ -135,7 +122,6 @@ export default function Home() {
             </Link>
           </div>
         </div>
-        </ScrollReveal>
       </div>
 
     </div>
