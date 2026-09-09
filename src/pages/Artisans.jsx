@@ -1,19 +1,20 @@
 import React from 'react';
+import ScrollReveal from '../components/ScrollReveal';
 
 export default function Artisans() {
   return (
     <div className="py-8 px-4 max-w-[1200px] mx-auto text-gray-900">
       
-      <div className="max-w-2xl mb-12">
+      <ScrollReveal animation="fade-up" delay={100} className="max-w-2xl mb-12">
         <span className="text-xs uppercase tracking-widest text-gray-500 font-medium mb-2 block">Savoir-faire d'exception</span>
         <h1 className="text-4xl lg:text-5xl font-serif font-light mb-4">Nos Artisans</h1>
         <p className="text-gray-600 font-light">
           Derrière chaque fil tissé se cachent des mains de maître, un savoir-faire transmis de génération en génération et une passion inconditionnelle pour l'art de la mode africaine.
         </p>
-      </div>
+      </ScrollReveal>
 
       {/* Mise en avant de la fondatrice & artisane principale avec une VIDÉO */}
-      <div className="bg-[#f7f7f7] border border-gray-200/80 rounded-[2.5rem] p-8 md:p-12 grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+      <ScrollReveal animation="fade-up" delay={200} className="bg-[#f7f7f7] border border-gray-200/80 rounded-[2.5rem] p-8 md:p-12 grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
         
         {/* Vidéo de présentation */}
         <div className="relative rounded-[2rem] overflow-hidden h-[400px] bg-gray-900 shadow-sm">
@@ -47,7 +48,7 @@ export default function Artisans() {
           </div>
         </div>
 
-      </div>
+      </ScrollReveal>
 
     </div>
   );

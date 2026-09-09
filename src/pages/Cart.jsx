@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import ScrollReveal from '../components/ScrollReveal';
 
 export default function Cart() {
   const { cart, removeFromCart, updateQuantity } = useCart();
@@ -40,36 +41,44 @@ export default function Cart() {
 
   if (cart.length === 0) {
     return (
-      <div className="py-20 text-center max-w-md mx-auto">
-        <div className="w-24 h-24 mx-auto mb-6 rounded-2xl shadow-sm overflow-hidden bg-white flex items-center justify-center">
-          <img src="/logo.jpeg" alt="Mc Molato Logo" className="w-full h-full object-cover rounded-2xl" />
+      <ScrollReveal animation="fade-up" delay={100}>
+        <div className="py-20 text-center max-w-md mx-auto px-4">
+          <div className="w-24 h-24 mx-auto mb-6 rounded-2xl shadow-sm overflow-hidden bg-white flex items-center justify-center">
+            <img src="/logo.jpeg" alt="Mc Molato Logo" className="w-full h-full object-cover rounded-2xl" />
+          </div>
+          <h2 className="text-2xl font-serif font-light mb-2">Votre panier est vide</h2>
+          <p className="text-xs text-gray-500 mb-6">Découvrez nos collections pour ajouter des articles à votre panier.</p>
+          <Link to="/boutique" className="bg-black text-white text-xs px-6 py-3 rounded-xl uppercase tracking-wider inline-block hover:bg-zinc-800 transition">
+            Explorer la boutique
+          </Link>
         </div>
-        <h2 className="text-2xl font-serif font-light mb-2">Votre panier est vide</h2>
-        <p className="text-xs text-gray-500 mb-6">Découvrez nos collections pour ajouter des articles à votre panier.</p>
-        <Link to="/boutique" className="bg-black text-white text-xs px-6 py-3 rounded-xl uppercase tracking-wider inline-block hover:bg-zinc-800 transition">
-          Explorer la boutique
-        </Link>
-      </div>
+      </ScrollReveal>
     );
   }
 
   return (
     <div className="py-8 max-w-[1400px] mx-auto px-4">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl md:text-4xl font-serif font-light">Votre Panier ({cart.reduce((acc, item) => acc + (Number(item.quantity) || 0), 0)})</h1>
-        <div className="w-14 h-14 rounded-2xl shadow-sm overflow-hidden bg-white flex items-center justify-center">
-          <img src="/logo.jpeg" alt="Mc Molato" className="w-full h-full object-cover rounded-2xl" />
+      
+      {/* En-tête du panier */}
+      <ScrollReveal animation="fade-up" delay={100}>
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl md:text-4xl font-serif font-light">Votre Panier ({cart.reduce((acc, item) => acc + (Number(item.quantity) || 0), 0)})</h1>
+          <div className="w-14 h-14 rounded-2xl shadow-sm overflow-hidden bg-white flex items-center justify-center">
+            <img src="/logo.jpeg" alt="Mc Molato" className="w-full h-full object-cover rounded-2xl" />
+          </div>
         </div>
-      </div>
+      </ScrollReveal>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 flex flex-col gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+        
+        {/* Liste des articles */}
+        <ScrollReveal animation="fade-right" delay={150} className="lg:col-span-2 flex flex-col gap-4">
           {cart.map((item) => {
             const unitPrice = getSafePrice(item);
             const qty = Number(item.quantity) || 1;
             return (
-              <div key={item.id} className="bg-gray-50 border border-gray-100 rounded-3xl p-4 flex items-center justify-between gap-4 shadow-sm">
-                <div className="flex items-center gap-4">
+              <div key={item.id} className="bg-gray-50 border border-gray-100 rounded-3xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+                <div className="flex items-center gap-4 w-full sm:w-auto">
                   <div className="w-20 h-24 rounded-2xl overflow-hidden bg-gray-200 flex-shrink-0">
                     <img src={item.image} alt={item.name} className="w-full h-full object-cover" onError={(e) => { e.target.src = '/logo.jpeg'; }} />
                   </div>
@@ -80,14 +89,14 @@ export default function Cart() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4">
+                <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto">
                   <div className="flex items-center border border-gray-200 rounded-xl bg-white overflow-hidden">
                     <button onClick={() => updateQuantity(item.id, qty - 1)} className="px-3 py-1 text-xs hover:bg-gray-100 transition">-</button>
                     <span className="px-3 text-xs font-semibold">{qty}</span>
                     <button onClick={() => updateQuantity(item.id, qty + 1)} className="px-3 py-1 text-xs hover:bg-gray-100 transition">+</button>
                   </div>
 
-                  <p className="text-xs font-bold text-black min-w-[80px] text-right">
+                  <p className="text-xs font-bold text-black min-w-[70px] text-right">
                     {(unitPrice * qty).toLocaleString()} $
                   </p>
 
@@ -102,9 +111,10 @@ export default function Cart() {
               </div>
             );
           })}
-        </div>
+        </ScrollReveal>
 
-        <div className="bg-gray-50 border border-gray-100 rounded-3xl p-6 h-fit flex flex-col justify-between shadow-sm">
+        {/* Résumé de la commande */}
+        <ScrollReveal animation="fade-left" delay={200} className="bg-gray-50 border border-gray-100 rounded-3xl p-6 h-fit flex flex-col justify-between shadow-sm">
           <h3 className="text-lg font-serif font-medium mb-6">Résumé du panier</h3>
           
           <div className="flex justify-between items-center mb-6 pb-6 border-b border-gray-200">
@@ -118,11 +128,12 @@ export default function Cart() {
 
           <button 
             onClick={handleWhatsAppOrder}
-            className="w-full bg-[#25D366] hover:bg-[#20ba5a] text-white py-3.5 rounded-xl text-xs uppercase tracking-wider font-semibold transition flex items-center justify-center gap-2 shadow-sm"
+            className="w-full bg-[#25D366] hover:bg-[#20ba5a] text-white py-3.5 rounded-xl text-xs uppercase tracking-wider font-semibold transition flex items-center justify-center gap-2 shadow-sm cursor-pointer"
           >
             <span>💬</span> Commander via WhatsApp
           </button>
-        </div>
+        </ScrollReveal>
+
       </div>
     </div>
   );

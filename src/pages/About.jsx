@@ -1,4 +1,5 @@
 import React from 'react';
+import ScrollReveal from '../components/ScrollReveal';
 
 export default function About() {
   return (
@@ -8,16 +9,16 @@ export default function About() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-16">
         
         {/* Image illustrative */}
-        <div className="relative rounded-[2.5rem] overflow-hidden shadow-sm h-[400px] bg-gray-100">
+        <ScrollReveal animation="fade-right" delay={100} className="relative rounded-[2.5rem] overflow-hidden shadow-sm h-[400px] bg-gray-100">
           <img 
             src="/selipa.jpeg" 
             alt="L'histoire de Mc Molato" 
             className="w-full h-full object-cover"
           />
-        </div>
+        </ScrollReveal>
 
         {/* Texte de présentation */}
-        <div>
+        <ScrollReveal animation="fade-left" delay={150}>
           <span className="text-xs uppercase tracking-widest text-gray-500 font-medium mb-2 block">Notre Héritage</span>
           <h1 className="text-4xl lg:text-5xl font-serif font-light mb-6">À propos de Mc Molato</h1>
           <p className="text-gray-600 font-light leading-relaxed mb-4">
@@ -29,7 +30,7 @@ export default function About() {
           <div className="border-l-2 border-black pl-4 italic text-sm text-gray-800 font-light">
             "Porter Mc Molato, c'est porter la tradition avec fierté et modernité."
           </div>
-        </div>
+        </ScrollReveal>
 
       </div>
 
