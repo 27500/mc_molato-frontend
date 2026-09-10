@@ -84,7 +84,7 @@ export default function Shop() {
         <ScrollReveal animation="fade-up" delay={150}>
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-10">
             <div className="flex justify-center gap-3 overflow-x-auto pb-2 w-full md:w-auto">
-              {['tous', 'homme', 'femme', 'unisexe'].map((cat) => (
+              {['tous', 'homme', 'femme', 'enfant', 'unisexe'].map((cat) => (
                 <button
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}

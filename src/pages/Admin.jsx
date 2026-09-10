@@ -17,8 +17,8 @@ export default function Admin() {
 
   // Formulaire d'ajout d'article
   const [name, setName] = useState('');
+  const [category, setCategory] = useState('homme'); // 👈 Catégorie placée en premier
   const [price, setPrice] = useState('');
-  const [category, setCategory] = useState('homme');
   const [description, setDescription] = useState('');
 
   // Photo principale
@@ -205,7 +205,7 @@ export default function Admin() {
 
       const newProductData = {
         name: name.trim(),
-        priceFormatted: `${numericPrice.toLocaleString()} $`, // 👈 Format en dollars
+        priceFormatted: `${numericPrice.toLocaleString()} $`,
         rawPrice: numericPrice,
         price: numericPrice, 
         category,
@@ -394,31 +394,30 @@ export default function Admin() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block font-medium text-gray-600 mb-1">Prix (en $)</label>
-              <input 
-                type="number" 
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                placeholder="Ex: 50" 
-                required
-                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-black transition"
-              />
-            </div>
+          {/* 📌 Champ de sélection de la catégorie placé en premier (avant le prix) */}
+          <div>
+            <label className="block font-medium text-gray-600 mb-1">Catégorie</label>
+            <select 
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-black transition cursor-pointer"
+            >
+              <option value="homme">Homme</option>
+              <option value="femme">Femme</option>
+              <option value="unisexe">Unisexe / Mixte</option>
+            </select>
+          </div>
 
-            <div>
-              <label className="block font-medium text-gray-600 mb-1">Catégorie</label>
-              <select 
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-black transition cursor-pointer"
-              >
-                <option value="homme">Homme</option>
-                <option value="femme">Femme</option>
-                <option value="unisexe">Unisexe / Mixte</option>
-              </select>
-            </div>
+          <div>
+            <label className="block font-medium text-gray-600 mb-1">Prix (en $)</label>
+            <input 
+              type="number" 
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              placeholder="Ex: 50" 
+              required
+              className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-black transition"
+            />
           </div>
 
           <div>
