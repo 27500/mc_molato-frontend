@@ -17,7 +17,7 @@ export default function Admin() {
 
   // Formulaire d'ajout d'article
   const [name, setName] = useState('');
-  const [category, setCategory] = useState('homme'); // 👈 Catégorie placée en premier
+  const [category, setCategory] = useState('homme'); // Catégorie par défaut
   const [price, setPrice] = useState('');
   const [description, setDescription] = useState('');
 
@@ -394,7 +394,7 @@ export default function Admin() {
             />
           </div>
 
-          {/* 📌 Champ de sélection de la catégorie placé en premier (avant le prix) */}
+          {/* 📌 Champ de sélection de la catégorie (avec Homme, Femme, Enfant, Unisexe) */}
           <div>
             <label className="block font-medium text-gray-600 mb-1">Catégorie</label>
             <select 
@@ -404,6 +404,7 @@ export default function Admin() {
             >
               <option value="homme">Homme</option>
               <option value="femme">Femme</option>
+              <option value="enfant">Enfant</option>
               <option value="unisexe">Unisexe / Mixte</option>
             </select>
           </div>
